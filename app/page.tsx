@@ -8,14 +8,17 @@ export default function Home() {
   const [step, setStep] = useState<"landing" | "loading" | "results">("landing");
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
+    setSuccess("");
 
     if (!email.trim()) return;
 
-    setStep("loading");
+    setIsSubmitting(true);
 
     try {
       const response = await fetch("/api/waitlist", {
@@ -28,19 +31,30 @@ export default function Home() {
 
       if (!response.ok) {
         setError(data.error || "Erro ao processar sua inscrição");
-        setStep("landing");
+        setIsSubmitting(false);
         return;
       }
 
-      setTimeout(() => setStep("results"), 2000);
+      // Sucesso! Mostra mensagem e vai pra tela de loading
+      setSuccess("✅ Tudo certo! Te mandamos um email de confirmação.");
+      setIsSubmitting(false);
+      
+      setTimeout(() => {
+        setStep("loading");
+        setTimeout(() => setStep("results"), 2000);
+      }, 1500);
     } catch {
       setError("Erro ao conectar. Tente novamente.");
-      setStep("landing");
+      setIsSubmitting(false);
     }
   }
 
   if (step === "loading") return <LoadingScreen />;
-  if (step === "results") return <ResultsScreen onRestart={() => setStep("landing")} />;
+  if (step === "results") return <ResultsScreen onRestart={() => {
+    setStep("landing");
+    setEmail("");
+    setSuccess("");
+  }} />;
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-indigo-950 via-purple-950 to-black text-white">
@@ -86,21 +100,31 @@ export default function Home() {
             <input
               type="email"
               placeholder="Seu melhor email"
-              className="flex-1 px-5 py-4 rounded-xl bg-white/10 border border-white/20 outline-none focus:border-indigo-400 transition"
+              className="flex-1 px-5 py-4 rounded-xl bg-white/10 border border-white/20 outline-none focus:border-indigo-400 transition disabled:opacity-50"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              disabled={isSubmitting}
             />
             <button
               type="submit"
-              className="px-8 py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 font-semibold transition shadow-lg shadow-indigo-500/30"
+              disabled={isSubmitting}
+              className="px-8 py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 font-semibold transition shadow-lg shadow-indigo-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Entrar na lista VIP →
+              {isSubmitting ? "Enviando..." : "Entrar na lista VIP →"}
             </button>
           </form>
 
           {error && (
-            <p className="text-sm text-red-400 mt-4">⚠️ {error}</p>
+            <div className="mt-4 inline-block px-4 py-2 bg-red-500/20 border border-red-500/50 rounded-lg text-sm text-red-300">
+              ⚠️ {error}
+            </div>
+          )}
+
+          {success && (
+            <div className="mt-4 inline-block px-4 py-2 bg-green-500/20 border border-green-500/50 rounded-lg text-sm text-green-300">
+              {success}
+            </div>
           )}
 
           <div className="mt-10 flex flex-wrap items-center justify-center gap-6 text-sm text-gray-400">
@@ -377,21 +401,31 @@ export default function Home() {
             <input
               type="email"
               placeholder="Seu melhor email"
-              className="flex-1 px-5 py-4 rounded-xl bg-white/10 border border-white/20 outline-none focus:border-indigo-400 transition"
+              className="flex-1 px-5 py-4 rounded-xl bg-white/10 border border-white/20 outline-none focus:border-indigo-400 transition disabled:opacity-50"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              disabled={isSubmitting}
             />
             <button
               type="submit"
-              className="px-8 py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 font-semibold transition shadow-lg shadow-indigo-500/30"
+              disabled={isSubmitting}
+              className="px-8 py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 font-semibold transition shadow-lg shadow-indigo-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Quero acesso VIP →
+              {isSubmitting ? "Enviando..." : "Quero acesso VIP →"}
             </button>
           </form>
 
           {error && (
-            <p className="text-sm text-red-400 mt-4">⚠️ {error}</p>
+            <div className="mt-4 inline-block px-4 py-2 bg-red-500/20 border border-red-500/50 rounded-lg text-sm text-red-300">
+              ⚠️ {error}
+            </div>
+          )}
+
+          {success && (
+            <div className="mt-4 inline-block px-4 py-2 bg-green-500/20 border border-green-500/50 rounded-lg text-sm text-green-300">
+              {success}
+            </div>
           )}
         </div>
       </section>
@@ -406,8 +440,8 @@ export default function Home() {
             © 2026 Klipora. Todos os direitos reservados.
           </div>
           <div className="flex gap-6">
-            <a href="#" className="hover:text-white transition">Termos</a>
-            <a href="#" className="hover:text-white transition">Privacidade</a>
+            <a href="/termos" className="hover:text-white transition">Termos</a>
+            <a href="/privacidade" className="hover:text-white transition">Privacidade</a>
             <a href="mailto:contato@klipora.com.br" className="hover:text-white transition">Contato</a>
           </div>
         </div>
