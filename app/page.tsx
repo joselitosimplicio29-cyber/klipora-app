@@ -391,7 +391,7 @@ export default function Home() {
       <section className="px-6 py-20">
         <div className="max-w-3xl mx-auto text-center">
           <h2 className="text-4xl md:text-5xl font-bold mb-6">
-            Pronto pra parar de perder tempo editando?
+            Pronto pra parar de perder tempo editando? 🚀
           </h2>
           <p className="text-xl text-gray-300 mb-10">
             Entre na lista VIP agora e ganhe acesso antecipado + 1 vídeo grátis pra testar.
