@@ -47,15 +47,14 @@ export async function POST(req: NextRequest) {
     cookiesFlag = `--cookies "${cookiesPath}"`;
   }
 
-  // 1. Download
+  // 1. Download com remote-components para resolver JS challenge do YouTube
   try {
     const python = detectPython();
-    const downloadCmd = `${python} -m yt_dlp -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" ${cookiesFlag} --js-runtimes node -o "${videoPath}" "${videoUrl}"`;
+    const downloadCmd = `${python} -m yt_dlp -f "best[ext=mp4]/best" ${cookiesFlag} --remote-components ejs:github -o "${videoPath}" "${videoUrl}"`;
     console.log("Download cmd:", downloadCmd);
     execSync(downloadCmd, { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] });
   } catch (err: unknown) {
     const e = err as { message?: string; stderr?: string | Buffer };
-    // Limpar cookies
     if (fs.existsSync(cookiesPath)) fs.unlinkSync(cookiesPath);
     return NextResponse.json({
       error: "Falha no download",
