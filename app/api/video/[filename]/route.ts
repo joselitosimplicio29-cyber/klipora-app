@@ -4,9 +4,9 @@ import fs from "fs";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { filename: string } }
+  context: { params: Promise<{ filename: string }> }
 ) {
-  const filename = params.filename;
+  const { filename } = await context.params;
 
   if (!/^clip_\d+\.mp4$/.test(filename)) {
     return NextResponse.json({ error: "Arquivo inválido" }, { status: 400 });
@@ -27,15 +27,10 @@ export async function GET(
     const start = parseInt(parts[0], 10);
     const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
     const chunkSize = end - start + 1;
+    const fileBuffer = fs.readFileSync(filePath);
+    const chunk = fileBuffer.slice(start, end + 1);
 
-    const fileStream = fs.createReadStream(filePath, { start, end });
-    const chunks: Buffer[] = [];
-    for await (const chunk of fileStream) {
-      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-    }
-    const buffer = Buffer.concat(chunks);
-
-    return new NextResponse(buffer, {
+    return new NextResponse(chunk, {
       status: 206,
       headers: {
         "Content-Range": `bytes ${start}-${end}/${fileSize}`,
