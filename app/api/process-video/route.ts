@@ -5,8 +5,8 @@ import fs from "fs";
 
 const ROOT_DIR = process.cwd();
 const DOWNLOADS_DIR = path.join(ROOT_DIR, "downloads");
-const FFPROBE = `"C:\\ffmpeg\\bin\\ffprobe.exe"`;
-const FFMPEG = `"C:\\ffmpeg\\bin\\ffmpeg.exe"`;
+const FFPROBE = `ffprobe`;
+const FFMPEG = `ffmpeg`;
 
 export async function POST(req: NextRequest) {
   if (!fs.existsSync(DOWNLOADS_DIR)) {
