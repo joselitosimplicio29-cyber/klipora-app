@@ -10,7 +10,11 @@ RUN apt-get update && apt-get install -y \
     && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/* \
-    && pip3 install yt-dlp
+    && pip3 install yt-dlp \
+    && yt-dlp --update
+
+ENV PATH="/usr/bin:$PATH"
+ENV YT_DLP_NO_UPDATE=1
 
 WORKDIR /app
 
