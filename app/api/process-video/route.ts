@@ -30,6 +30,7 @@ export async function POST(req: NextRequest) {
 
   const timestamp = Date.now();
   const videoPath = path.join(DOWNLOADS_DIR, `video_${timestamp}.mp4`);
+  const cookiesPath = path.join(DOWNLOADS_DIR, `cookies_${timestamp}.txt`);
 
   function detectPython(): string {
     for (const cmd of ["python3", "python", "py"]) {
@@ -38,19 +39,32 @@ export async function POST(req: NextRequest) {
     throw new Error("Python não encontrado.");
   }
 
-  // 1. Download com --js-runtimes node
+  // Salvar cookies do env em arquivo temporário
+  let cookiesFlag = "";
+  const cookiesEnv = process.env.YOUTUBE_COOKIES;
+  if (cookiesEnv) {
+    fs.writeFileSync(cookiesPath, cookiesEnv, "utf8");
+    cookiesFlag = `--cookies "${cookiesPath}"`;
+  }
+
+  // 1. Download
   try {
     const python = detectPython();
-    const downloadCmd = `${python} -m yt_dlp -f "mp4" --js-runtimes node -o "${videoPath}" "${videoUrl}"`;
+    const downloadCmd = `${python} -m yt_dlp -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" ${cookiesFlag} --js-runtimes node -o "${videoPath}" "${videoUrl}"`;
     console.log("Download cmd:", downloadCmd);
     execSync(downloadCmd, { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] });
   } catch (err: unknown) {
     const e = err as { message?: string; stderr?: string | Buffer };
+    // Limpar cookies
+    if (fs.existsSync(cookiesPath)) fs.unlinkSync(cookiesPath);
     return NextResponse.json({
       error: "Falha no download",
       detail: e?.stderr?.toString?.() || e?.message
     }, { status: 500 });
   }
+
+  // Limpar cookies após uso
+  if (fs.existsSync(cookiesPath)) fs.unlinkSync(cookiesPath);
 
   if (!fs.existsSync(videoPath)) {
     return NextResponse.json({ error: "Arquivo não encontrado após download" }, { status: 500 });
@@ -114,18 +128,14 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // 4. Limpar vídeo original após processar
-  try {
-    fs.unlinkSync(videoPath);
-  } catch { }
+  // 4. Limpar vídeo original
+  try { fs.unlinkSync(videoPath); } catch { }
 
   if (clips.length === 0) {
     return NextResponse.json({ error: "Nenhum clip gerado" }, { status: 500 });
   }
 
-  const videoSizeKB = Math.round(
-    clips.reduce((acc, c) => acc + c.sizeKB, 0)
-  );
+  const videoSizeKB = Math.round(clips.reduce((acc, c) => acc + c.sizeKB, 0));
 
   return NextResponse.json({
     success: true,
