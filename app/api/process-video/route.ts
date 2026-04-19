@@ -32,44 +32,61 @@ export async function POST(req: NextRequest) {
   const videoPath = path.join(DOWNLOADS_DIR, `video_${timestamp}.mp4`);
 
   function detectPython(): string {
-    for (const cmd of ["python", "python3", "py"]) {
+    for (const cmd of ["python3", "python", "py"]) {
       try { execSync(`${cmd} --version`, { stdio: "pipe" }); return cmd; } catch { }
     }
     throw new Error("Python não encontrado.");
   }
 
-  // 1. Download
+  // 1. Download com --js-runtimes node
   try {
     const python = detectPython();
-    const downloadCmd = `${python} -m yt_dlp -f "mp4" -o "${videoPath}" "${videoUrl}"`;
+    const downloadCmd = `${python} -m yt_dlp -f "mp4" --js-runtimes node -o "${videoPath}" "${videoUrl}"`;
+    console.log("Download cmd:", downloadCmd);
     execSync(downloadCmd, { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] });
   } catch (err: unknown) {
     const e = err as { message?: string; stderr?: string | Buffer };
-    return NextResponse.json({ error: "Falha no download", detail: e?.stderr?.toString?.() || e?.message }, { status: 500 });
+    return NextResponse.json({
+      error: "Falha no download",
+      detail: e?.stderr?.toString?.() || e?.message
+    }, { status: 500 });
   }
 
   if (!fs.existsSync(videoPath)) {
     return NextResponse.json({ error: "Arquivo não encontrado após download" }, { status: 500 });
   }
 
-  // 2. Detectar duração total do vídeo com ffprobe
+  // 2. Detectar duração total com ffprobe
   let totalSeconds = 0;
   try {
     const probeCmd = `${FFPROBE} -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${videoPath}"`;
     const output = execSync(probeCmd, { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] });
     totalSeconds = Math.floor(parseFloat(output.trim()));
-    console.log(`Duração total do vídeo: ${totalSeconds}s`);
+    console.log(`Duração total: ${totalSeconds}s`);
   } catch (err: unknown) {
     const e = err as { message?: string; stderr?: string | Buffer };
-    return NextResponse.json({ error: "Falha ao detectar duração do vídeo", detail: e?.stderr?.toString?.() || e?.message }, { status: 500 });
+    return NextResponse.json({
+      error: "Falha ao detectar duração do vídeo",
+      detail: e?.stderr?.toString?.() || e?.message
+    }, { status: 500 });
   }
 
   if (totalSeconds < clipDuration) {
-    return NextResponse.json({ error: `Vídeo muito curto (${totalSeconds}s) para clips de ${clipDuration}s` }, { status: 400 });
+    return NextResponse.json({
+      error: `Vídeo muito curto (${totalSeconds}s) para clips de ${clipDuration}s`
+    }, { status: 400 });
   }
 
   // 3. Cortar em múltiplos clips
-  const clips: { clipUrl: string; clipFilename: string; start: number; end: number; sizeKB: number; index: number }[] = [];
+  const clips: {
+    clipUrl: string;
+    clipFilename: string;
+    start: number;
+    end: number;
+    sizeKB: number;
+    index: number;
+  }[] = [];
+
   const totalClips = Math.floor(totalSeconds / clipDuration);
 
   for (let i = 0; i < totalClips; i++) {
@@ -94,15 +111,21 @@ export async function POST(req: NextRequest) {
       }
     } catch (err) {
       console.error(`Erro no clip ${i + 1}:`, err);
-      // continua mesmo se um clip falhar
     }
   }
+
+  // 4. Limpar vídeo original após processar
+  try {
+    fs.unlinkSync(videoPath);
+  } catch { }
 
   if (clips.length === 0) {
     return NextResponse.json({ error: "Nenhum clip gerado" }, { status: 500 });
   }
 
-  const videoSizeKB = Math.round(fs.statSync(videoPath).size / 1024);
+  const videoSizeKB = Math.round(
+    clips.reduce((acc, c) => acc + c.sizeKB, 0)
+  );
 
   return NextResponse.json({
     success: true,
