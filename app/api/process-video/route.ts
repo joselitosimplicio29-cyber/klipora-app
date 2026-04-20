@@ -71,12 +71,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "RAPIDAPI_KEY não configurada" }, { status: 500 });
     }
 
+    // Extrai o ID do YouTube da URL
+    const ytMatch = videoUrl.match(/(?:v=|youtu\.be\/|shorts\/)([a-zA-Z0-9_-]{11})/);
+    const videoId = ytMatch?.[1];
+    if (!videoId) {
+      return NextResponse.json({ error: "ID do vídeo não encontrado na URL. Use um link válido do YouTube." }, { status: 400 });
+    }
+
     // 1. Buscar link de download via YTStream
     let downloadUrl = "";
     try {
-      const encodedUrl = encodeURIComponent(videoUrl);
       const apiRes = await fetch(
-        `https://ytstream-download-youtube-videos.p.rapidapi.com/dl?id=${encodedUrl}`,
+        `https://ytstream-download-youtube-videos.p.rapidapi.com/dl?id=${videoId}`,
         {
           method: "GET",
           headers: {
@@ -95,15 +101,24 @@ export async function POST(req: NextRequest) {
       }
 
       const apiData = await apiRes.json();
+      console.log("YTStream response:", JSON.stringify(apiData).slice(0, 500));
 
       // YTStream retorna formats com links diretos
       const formats = apiData?.formats || apiData?.adaptiveFormats || [];
-      const mp4 = formats.find((f: { mimeType?: string; url?: string }) =>
+      
+      // Prioriza MP4 com video+audio (não adaptive)
+      const mp4WithAudio = formats.find((f: { mimeType?: string; url?: string; audioQuality?: string }) =>
+        f.mimeType?.includes("video/mp4") && f.url && f.audioQuality
+      );
+      
+      const mp4Any = formats.find((f: { mimeType?: string; url?: string }) =>
         f.mimeType?.includes("video/mp4") && f.url
       );
 
-      if (mp4?.url) {
-        downloadUrl = mp4.url;
+      if (mp4WithAudio?.url) {
+        downloadUrl = mp4WithAudio.url;
+      } else if (mp4Any?.url) {
+        downloadUrl = mp4Any.url;
       } else if (apiData?.url) {
         downloadUrl = apiData.url;
       } else {
@@ -122,6 +137,7 @@ export async function POST(req: NextRequest) {
 
     // 2. Baixar o vídeo da URL direta
     try {
+      console.log("Baixando vídeo de:", downloadUrl.slice(0, 100));
       const videoRes = await fetch(downloadUrl);
       if (!videoRes.ok) {
         return NextResponse.json({
