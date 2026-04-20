@@ -1,28 +1,32 @@
-// app/api/waitlist/route.ts
-import { createClient } from '@supabase/supabase-js'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
-// 🔑 Isto evita que o Next.js tente pré-renderizar/coletar dados em build-time
-export const dynamic = 'force-dynamic'
-export const runtime = 'nodejs'
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
-export async function POST(request: Request) {
-  // 🔑 Cria o client DENTRO do handler, não no escopo do módulo
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+export async function POST(req: NextRequest) {
+  try {
+    const { nome, email } = await req.json();
 
-  if (!supabaseUrl || !supabaseKey) {
-    return NextResponse.json(
-      { error: 'Supabase not configured' },
-      { status: 500 }
-    )
+    if (!nome || !email) {
+      return NextResponse.json({ error: "Nome e email são obrigatórios" }, { status: 400 });
+    }
+
+    const { error } = await supabase
+      .from("waitlist")
+      .insert([{ nome, email }]);
+
+    if (error) {
+      if (error.code === "23505") {
+        return NextResponse.json({ error: "Este email já está na lista!" }, { status: 409 });
+      }
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
-
-  const supabase = createClient(supabaseUrl, supabaseKey)
-
-  // ... resto da sua lógica (ler body, inserir no Supabase, etc)
-  const body = await request.json()
-  // ...
-
-  return NextResponse.json({ success: true })
 }
