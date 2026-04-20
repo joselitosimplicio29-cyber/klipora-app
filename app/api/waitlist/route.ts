@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
     if (!nome || !email) {
       return NextResponse.json({ error: "Nome e email são obrigatórios" }, { status: 400 });
     }
-    const { error } = await supabase.from("waitlist").insert([{ nome, email }]);
+    const { error } = await supabase.from("waitlist").insert([{ name: nome, email }]);
     if (error) {
       if (error.code === "23505") {
         return NextResponse.json({ error: "Este email já está na lista!" }, { status: 409 });
