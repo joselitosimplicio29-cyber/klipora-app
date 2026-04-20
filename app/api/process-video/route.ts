@@ -8,76 +8,114 @@ const DOWNLOADS_DIR = path.join(ROOT_DIR, "downloads");
 const FFPROBE = `ffprobe`;
 const FFMPEG = `ffmpeg`;
 
+export const maxDuration = 300;
+
 export async function POST(req: NextRequest) {
   if (!fs.existsSync(DOWNLOADS_DIR)) {
     fs.mkdirSync(DOWNLOADS_DIR, { recursive: true });
   }
 
-  let body: { url?: string; duration?: number };
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Body inválido" }, { status: 400 });
-  }
-
-  const videoUrl = body?.url?.trim();
-  if (!videoUrl || !videoUrl.startsWith("http")) {
-    return NextResponse.json({ error: "URL inválida" }, { status: 400 });
-  }
-
-  const ALLOWED = [15, 30, 60, 120];
-  const clipDuration = ALLOWED.includes(body?.duration ?? 0) ? body!.duration! : 30;
-
   const timestamp = Date.now();
   const videoPath = path.join(DOWNLOADS_DIR, `video_${timestamp}.mp4`);
-  const cookiesPath = path.join(DOWNLOADS_DIR, `cookies_${timestamp}.txt`);
+  const ALLOWED = [15, 30, 60, 120];
+  let clipDuration = 30;
 
-  function detectPython(): string {
-    for (const cmd of ["python3", "python", "py"]) {
-      try { execSync(`${cmd} --version`, { stdio: "pipe" }); return cmd; } catch { }
+  const contentType = req.headers.get("content-type") || "";
+
+  // ── MODO 1: UPLOAD DE ARQUIVO (FormData) ──────────────────────────────────
+  if (contentType.includes("multipart/form-data")) {
+    let formData: FormData;
+    try {
+      formData = await req.formData();
+    } catch {
+      return NextResponse.json({ error: "Erro ao ler FormData" }, { status: 400 });
     }
-    throw new Error("Python não encontrado.");
-  }
 
-  // Salvar cookies do env em arquivo temporário
-  let cookiesFlag = "";
-  const cookiesEnv = process.env.YOUTUBE_COOKIES;
-  if (cookiesEnv) {
-    fs.writeFileSync(cookiesPath, cookiesEnv, "utf8");
-    cookiesFlag = `--cookies "${cookiesPath}"`;
-  }
+    const file = formData.get("video") as File | null;
+    const durationRaw = formData.get("duration");
 
-  // 1. Download com remote-components para resolver JS challenge do YouTube
-  try {
-    const python = detectPython();
-    const downloadCmd = `${python} -m yt_dlp -f "best[ext=mp4]/best" ${cookiesFlag} --remote-components ejs:github -o "${videoPath}" "${videoUrl}"`;
-    console.log("Download cmd:", downloadCmd);
-    execSync(downloadCmd, { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] });
-  } catch (err: unknown) {
-    const e = err as { message?: string; stderr?: string | Buffer };
+    if (!file || file.size === 0) {
+      return NextResponse.json({ error: "Nenhum arquivo enviado" }, { status: 400 });
+    }
+
+    const dur = parseInt(String(durationRaw ?? "30"));
+    clipDuration = ALLOWED.includes(dur) ? dur : 30;
+
+    try {
+      const buffer = Buffer.from(await file.arrayBuffer());
+      fs.writeFileSync(videoPath, buffer);
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      return NextResponse.json({ error: "Falha ao salvar arquivo", detail: e?.message }, { status: 500 });
+    }
+
+  // ── MODO 2: URL DO YOUTUBE (JSON) ─────────────────────────────────────────
+  } else if (contentType.includes("application/json")) {
+    let body: { url?: string; duration?: number };
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Body inválido" }, { status: 400 });
+    }
+
+    const videoUrl = body?.url?.trim();
+    if (!videoUrl || !videoUrl.startsWith("http")) {
+      return NextResponse.json({ error: "URL inválida" }, { status: 400 });
+    }
+
+    const dur = body?.duration ?? 30;
+    clipDuration = ALLOWED.includes(dur) ? dur : 30;
+
+    const cookiesPath = path.join(DOWNLOADS_DIR, `cookies_${timestamp}.txt`);
+    let cookiesFlag = "";
+    const cookiesEnv = process.env.YOUTUBE_COOKIES;
+    if (cookiesEnv) {
+      fs.writeFileSync(cookiesPath, cookiesEnv, "utf8");
+      cookiesFlag = `--cookies "${cookiesPath}"`;
+    }
+
+    function detectPython(): string {
+      for (const cmd of ["python3", "python", "py"]) {
+        try { execSync(`${cmd} --version`, { stdio: "pipe" }); return cmd; } catch { }
+      }
+      throw new Error("Python não encontrado.");
+    }
+
+    try {
+      const python = detectPython();
+      const downloadCmd = `${python} -m yt_dlp -f "best[ext=mp4]/best" ${cookiesFlag} -o "${videoPath}" "${videoUrl}"`;
+      execSync(downloadCmd, { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] });
+    } catch (err: unknown) {
+      const e = err as { message?: string; stderr?: string | Buffer };
+      if (fs.existsSync(cookiesPath)) fs.unlinkSync(cookiesPath);
+      return NextResponse.json({
+        error: "Falha no download do YouTube",
+        detail: e?.stderr?.toString?.() || e?.message
+      }, { status: 500 });
+    }
+
     if (fs.existsSync(cookiesPath)) fs.unlinkSync(cookiesPath);
+
+  } else {
     return NextResponse.json({
-      error: "Falha no download",
-      detail: e?.stderr?.toString?.() || e?.message
-    }, { status: 500 });
+      error: "Content-Type não suportado. Use multipart/form-data ou application/json"
+    }, { status: 400 });
   }
 
-  // Limpar cookies após uso
-  if (fs.existsSync(cookiesPath)) fs.unlinkSync(cookiesPath);
-
+  // ── VERIFICAR ARQUIVO ──────────────────────────────────────────────────────
   if (!fs.existsSync(videoPath)) {
-    return NextResponse.json({ error: "Arquivo não encontrado após download" }, { status: 500 });
+    return NextResponse.json({ error: "Arquivo de vídeo não encontrado" }, { status: 500 });
   }
 
-  // 2. Detectar duração total com ffprobe
+  // ── DETECTAR DURAÇÃO COM FFPROBE ───────────────────────────────────────────
   let totalSeconds = 0;
   try {
     const probeCmd = `${FFPROBE} -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${videoPath}"`;
     const output = execSync(probeCmd, { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] });
     totalSeconds = Math.floor(parseFloat(output.trim()));
-    console.log(`Duração total: ${totalSeconds}s`);
   } catch (err: unknown) {
     const e = err as { message?: string; stderr?: string | Buffer };
+    try { fs.unlinkSync(videoPath); } catch { }
     return NextResponse.json({
       error: "Falha ao detectar duração do vídeo",
       detail: e?.stderr?.toString?.() || e?.message
@@ -85,12 +123,13 @@ export async function POST(req: NextRequest) {
   }
 
   if (totalSeconds < clipDuration) {
+    try { fs.unlinkSync(videoPath); } catch { }
     return NextResponse.json({
       error: `Vídeo muito curto (${totalSeconds}s) para clips de ${clipDuration}s`
     }, { status: 400 });
   }
 
-  // 3. Cortar em múltiplos clips
+  // ── CORTAR EM CLIPS COM FFMPEG ─────────────────────────────────────────────
   const clips: {
     clipUrl: string;
     clipFilename: string;
@@ -127,7 +166,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // 4. Limpar vídeo original
+  // ── LIMPAR ORIGINAL ────────────────────────────────────────────────────────
   try { fs.unlinkSync(videoPath); } catch { }
 
   if (clips.length === 0) {
