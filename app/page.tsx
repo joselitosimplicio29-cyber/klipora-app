@@ -75,6 +75,11 @@ export default function Home() {
   const [isDragging, setIsDragging] = useState(false);
   const [showFloating, setShowFloating] = useState(false);
   const [vagas, setVagas] = useState(47);
+  const [vipNome, setVipNome] = useState("");
+  const [vipEmail, setVipEmail] = useState("");
+  const [vipLoading, setVipLoading] = useState(false);
+  const [vipSuccess, setVipSuccess] = useState(false);
+  const [vipError, setVipError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const toolRef = useRef<HTMLDivElement>(null);
@@ -134,6 +139,33 @@ export default function Home() {
     }
   }
 
+  async function handleVip() {
+    setVipError("");
+    if (!vipNome.trim() || !vipEmail.trim()) {
+      setVipError("Preencha nome e email!");
+      return;
+    }
+    setVipLoading(true);
+    try {
+      const res = await fetch("/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nome: vipNome.trim(), email: vipEmail.trim() }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setVipSuccess(true);
+        setVagas(v => Math.max(0, v - 1));
+      } else {
+        setVipError(data.error || "Erro ao cadastrar");
+      }
+    } catch {
+      setVipError("Erro de rede. Tente novamente.");
+    } finally {
+      setVipLoading(false);
+    }
+  }
+
   return (
     <>
       <style>{`
@@ -141,7 +173,6 @@ export default function Home() {
         body { background: #0d0d1a; }
         .page { min-height: 100vh; background: #0d0d1a; color: #fff; font-family: 'Inter', system-ui, sans-serif; }
 
-        /* URGENCY BAR */
         .urgency-bar {
           background: linear-gradient(90deg, #7c3aed, #c026d3, #7c3aed);
           background-size: 200% 100%;
@@ -152,26 +183,16 @@ export default function Home() {
           flex-wrap: wrap; cursor: pointer;
         }
         @keyframes bar-shift { 0%{background-position:0%} 100%{background-position:200%} }
-        .urgency-bar:hover { opacity: .9; }
         .urgency-dot { width: 8px; height: 8px; border-radius: 50%; background: #fff; animation: blink 1s infinite; flex-shrink: 0; }
         @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
 
-        .nav {
-          display: flex; align-items: center; justify-content: space-between;
-          padding: 0 48px; height: 64px;
-          border-bottom: 1px solid rgba(255,255,255,0.06);
-          background: rgba(13,13,26,0.85); backdrop-filter: blur(20px);
-          position: sticky; top: 0; z-index: 100;
-        }
+        .nav { display: flex; align-items: center; justify-content: space-between; padding: 0 48px; height: 64px; border-bottom: 1px solid rgba(255,255,255,0.06); background: rgba(13,13,26,0.85); backdrop-filter: blur(20px); position: sticky; top: 0; z-index: 100; }
         .nav-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 20px; letter-spacing: 2px; background: linear-gradient(90deg, #b57bee, #e040fb); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .nav-links { display: flex; align-items: center; gap: 36px; }
         .nav-links a { color: rgba(255,255,255,0.65); font-size: 14px; text-decoration: none; }
         .nav-btn { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.14); color: #fff; padding: 8px 20px; border-radius: 8px; font-size: 14px; cursor: pointer; }
 
-        .bg-glow {
-          position: fixed; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 0;
-          background: radial-gradient(ellipse 60% 40% at 20% 0%, rgba(124,58,237,0.18) 0%, transparent 60%), radial-gradient(ellipse 50% 35% at 80% 10%, rgba(192,38,211,0.12) 0%, transparent 55%);
-        }
+        .bg-glow { position: fixed; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 0; background: radial-gradient(ellipse 60% 40% at 20% 0%, rgba(124,58,237,0.18) 0%, transparent 60%), radial-gradient(ellipse 50% 35% at 80% 10%, rgba(192,38,211,0.12) 0%, transparent 55%); }
 
         .hero { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 80px 24px 60px; }
         .badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(124,58,237,0.15); border: 1px solid rgba(124,58,237,0.3); color: #c4a0ff; font-size: 12px; font-weight: 500; letter-spacing: .5px; padding: 5px 14px; border-radius: 100px; margin-bottom: 28px; text-transform: uppercase; }
@@ -266,7 +287,6 @@ export default function Home() {
         .dl-all-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 12px; background: rgba(124,58,237,0.15); border: 1px solid rgba(124,58,237,0.3); color: #c4a0ff; font-size: 13px; font-weight: 600; cursor: pointer; transition: background .15s; }
         .dl-all-btn:hover { background: rgba(124,58,237,0.25); }
 
-        /* VIP SECTION */
         .vip-section { position: relative; z-index: 1; padding: 60px 24px 80px; text-align: center; }
         .vip-card { max-width: 640px; margin: 0 auto; background: linear-gradient(135deg, rgba(124,58,237,0.12), rgba(192,38,211,0.08)); border: 1px solid rgba(124,58,237,0.3); border-radius: 28px; padding: 52px 44px; position: relative; overflow: hidden; }
         .vip-card::before { content: ''; position: absolute; top: -80px; left: 50%; transform: translateX(-50%); width: 400px; height: 400px; background: radial-gradient(ellipse, rgba(124,58,237,0.15) 0%, transparent 70%); border-radius: 50%; animation: vip-pulse 4s ease-in-out infinite; pointer-events: none; }
@@ -276,7 +296,6 @@ export default function Home() {
         .vip-title { font-family: 'Syne', sans-serif; font-size: clamp(24px, 4vw, 36px); font-weight: 800; letter-spacing: -1px; margin-bottom: 12px; }
         .vip-sub { font-size: 15px; color: rgba(255,255,255,0.55); margin-bottom: 32px; line-height: 1.7; }
 
-        /* COUNTDOWN */
         .countdown-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; max-width: 420px; margin-left: auto; margin-right: auto; }
         .countdown-block { background: rgba(0,0,0,0.4); border: 1px solid rgba(124,58,237,0.3); border-radius: 16px; padding: 16px 8px; }
         .countdown-num { font-size: 42px; font-weight: 900; letter-spacing: -2px; background: linear-gradient(135deg, #9d6ffd, #e040fb); -webkit-background-clip: text; -webkit-text-fill-color: transparent; line-height: 1; display: block; }
@@ -284,7 +303,6 @@ export default function Home() {
 
         .vagas-badge { display: inline-flex; align-items: center; gap: 8px; color: #f59e0b; font-size: 15px; font-weight: 700; margin-bottom: 28px; }
         .vagas-dot { width: 8px; height: 8px; border-radius: 50%; background: #f59e0b; animation: blink 1s infinite; }
-        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
 
         .vip-form { display: flex; flex-direction: column; gap: 12px; position: relative; z-index: 1; }
         .vip-input { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 15px 18px; color: #fff; font-size: 15px; outline: none; transition: border-color .2s; width: 100%; }
@@ -293,9 +311,11 @@ export default function Home() {
         .vip-btn { background: linear-gradient(135deg, #7c3aed, #c026d3); border: none; color: #fff; padding: 17px; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; transition: all .2s; box-shadow: 0 0 30px rgba(124,58,237,0.4); animation: btn-pulse 2.5s ease-in-out infinite; }
         @keyframes btn-pulse { 0%,100%{box-shadow:0 0 30px rgba(124,58,237,0.4)} 50%{box-shadow:0 0 60px rgba(192,38,211,0.7)} }
         .vip-btn:hover { transform: translateY(-2px); }
+        .vip-btn:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+        .vip-btn-success { background: rgba(34,197,94,0.2); border: 1px solid rgba(34,197,94,0.4); border-radius: 12px; padding: 17px; color: #4ade80; font-size: 16px; font-weight: 700; }
+        .vip-error { color: #f87171; font-size: 13px; margin-top: 4px; }
         .vip-privacy { font-size: 12px; color: rgba(255,255,255,0.25); margin-top: 10px; }
 
-        /* FLOATING BTN */
         .floating-vip { position: fixed; bottom: 24px; right: 24px; z-index: 200; background: linear-gradient(135deg, #7c3aed, #c026d3); color: #fff; border: none; padding: 14px 22px; border-radius: 100px; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: 0 8px 32px rgba(124,58,237,0.5); transition: all .3s; display: flex; align-items: center; gap: 8px; animation: float-pulse 2s ease-in-out infinite; }
         @keyframes float-pulse { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
         .floating-vip:hover { transform: translateY(-4px) scale(1.05); }
@@ -318,7 +338,6 @@ export default function Home() {
 
       <div className="bg-glow" />
 
-      {/* URGENCY BAR */}
       <div className="urgency-bar" onClick={() => vipRef.current?.scrollIntoView({ behavior: "smooth" })}>
         <span className="urgency-dot" />
         🔥 Acesso antecipado encerrando em {countdown.days}d {String(countdown.hours).padStart(2,"0")}h {String(countdown.minutes).padStart(2,"0")}m {String(countdown.seconds).padStart(2,"0")}s
@@ -332,17 +351,13 @@ export default function Home() {
             <a href="#tool">Gerar clips</a>
             <a href="#vip">Lista VIP</a>
           </div>
-          <button className="nav-btn" onClick={() => vipRef.current?.scrollIntoView({ behavior: "smooth" })}>
-            Acesso antecipado
-          </button>
+          <button className="nav-btn" onClick={() => vipRef.current?.scrollIntoView({ behavior: "smooth" })}>Acesso antecipado</button>
         </nav>
 
         <section className="hero">
           <div className="badge"><span className="badge-dot" /> MVP em construção · Acesso antecipado</div>
           <h1>1 vídeo longo.<br /><em>Infinitos clips virais.</em></h1>
-          <p className="hero-sub">
-            Faça upload do seu vídeo e o Klipora gera <strong>clips prontos para TikTok, Reels e YouTube Shorts</strong> automaticamente.
-          </p>
+          <p className="hero-sub">Faça upload do seu vídeo e o Klipora gera <strong>clips prontos para TikTok, Reels e YouTube Shorts</strong> automaticamente.</p>
           <div className="hero-btns">
             <button className="btn-grad" onClick={() => document.getElementById("tool")?.scrollIntoView({ behavior: "smooth" })}>Gerar clips grátis</button>
             <button className="btn-ghost" onClick={() => vipRef.current?.scrollIntoView({ behavior: "smooth" })}>🚀 Acesso antecipado</button>
@@ -474,17 +489,23 @@ export default function Home() {
               </div>
             </div>
             <div className="vagas-badge"><span className="vagas-dot" />🔥 Apenas {vagas} vagas restantes</div>
-            <div className="vip-form">
-              <input className="vip-input" type="text" placeholder="Seu nome" />
-              <input className="vip-input" type="email" placeholder="Seu melhor email" />
-              <button className="vip-btn" onClick={() => { setVagas(v => Math.max(0, v - 1)); }}>🚀 Quero acesso antecipado</button>
-            </div>
-            <p className="vip-privacy">Sem spam. Seus dados estão seguros. Cancele quando quiser.</p>
+            {!vipSuccess ? (
+              <div className="vip-form">
+                <input className="vip-input" type="text" placeholder="Seu nome" value={vipNome} onChange={(e) => setVipNome(e.target.value)} />
+                <input className="vip-input" type="email" placeholder="Seu melhor email" value={vipEmail} onChange={(e) => setVipEmail(e.target.value)} />
+                {vipError && <p className="vip-error">⚠ {vipError}</p>}
+                <button className="vip-btn" onClick={handleVip} disabled={vipLoading}>
+                  {vipLoading ? "Enviando..." : "🚀 Quero acesso antecipado"}
+                </button>
+                <p className="vip-privacy">Sem spam. Seus dados estão seguros. Cancele quando quiser.</p>
+              </div>
+            ) : (
+              <div className="vip-btn-success">✅ Na lista! Em breve você receberá um email.</div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* FLOATING BTN */}
       <button className={`floating-vip${showFloating ? "" : " hidden"}`} onClick={() => vipRef.current?.scrollIntoView({ behavior: "smooth" })}>
         🔥 {vagas} vagas restantes →
       </button>
