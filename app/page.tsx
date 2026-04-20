@@ -181,7 +181,6 @@ export default function Home() {
         .tool-title { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 700; margin-bottom: 6px; }
         .tool-sub { font-size: 14px; color: rgba(255,255,255,0.5); margin-bottom: 24px; }
 
-        /* DROP ZONE */
         .drop-zone {
           border: 2px dashed rgba(124,58,237,0.3); border-radius: 12px;
           padding: 36px 24px; text-align: center; cursor: pointer;
@@ -193,7 +192,6 @@ export default function Home() {
         .drop-sub { font-size: 13px; color: rgba(255,255,255,0.4); }
         .drop-formats { font-size: 12px; color: rgba(255,255,255,0.25); margin-top: 8px; }
 
-        /* FILE SELECTED */
         .file-selected {
           display: flex; align-items: center; gap: 12px;
           background: rgba(124,58,237,0.1); border: 1px solid rgba(124,58,237,0.3);
@@ -205,7 +203,6 @@ export default function Home() {
         .file-size { font-size: 12px; color: rgba(255,255,255,0.4); margin-top: 2px; }
         .file-change { font-size: 12px; color: #a78bfa; cursor: pointer; background: none; border: none; flex-shrink: 0; }
 
-        /* DURATION */
         .dur-label {
           display: flex; justify-content: space-between; font-size: 13px;
           color: rgba(255,255,255,0.5); margin-bottom: 10px;
@@ -220,7 +217,6 @@ export default function Home() {
         .dur-btn:hover { border-color: rgba(124,58,237,0.4); color: #fff; }
         .dur-btn.on { background: rgba(124,58,237,0.2); border-color: #7c3aed; color: #c4a0ff; }
 
-        /* SUBMIT */
         .submit-btn {
           width: 100%; padding: 15px;
           background: linear-gradient(135deg, #7c3aed, #c026d3); border: none;
@@ -229,7 +225,6 @@ export default function Home() {
         }
         .submit-btn:disabled { opacity: .4; cursor: not-allowed; }
 
-        /* LOADING */
         .loading-box { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 28px 0; }
         .spinner-ring {
           width: 40px; height: 40px; border: 3px solid rgba(124,58,237,0.2);
@@ -244,7 +239,6 @@ export default function Home() {
         }
         @keyframes loadbar { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
 
-        /* RESULTS */
         .results-wrap { position: relative; z-index: 1; max-width: 1000px; margin: 0 auto; padding: 0 24px 80px; animation: fadeUp .4s ease; }
         @keyframes fadeUp { from { opacity:0; transform: translateY(16px); } to { opacity:1; transform: translateY(0); } }
         .results-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
@@ -253,7 +247,6 @@ export default function Home() {
         .results-meta { font-size: 13px; color: rgba(255,255,255,0.35); }
         .results-grid { display: grid; grid-template-columns: 1fr 300px; gap: 16px; }
 
-        /* PLAYER */
         .player-box { background: rgba(255,255,255,0.04); border: 1px solid rgba(124,58,237,0.25); border-radius: 18px; overflow: hidden; }
         .player-top { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid rgba(255,255,255,0.06); }
         .player-label { font-size: 13px; font-weight: 600; color: #c4a0ff; }
@@ -268,7 +261,6 @@ export default function Home() {
           cursor: pointer; text-decoration: none;
         }
 
-        /* CLIP LIST */
         .clip-sidebar { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 18px; overflow: hidden; display: flex; flex-direction: column; }
         .clip-sidebar-hd { padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.35); text-transform: uppercase; letter-spacing: .8px; }
         .clip-list { overflow-y: auto; flex: 1; max-height: 440px; }
@@ -286,7 +278,16 @@ export default function Home() {
         .clip-play { color: rgba(255,255,255,0.25); font-size: 12px; }
         .clip-row.on .clip-play { color: #9d6ffd; }
 
-        /* ERROR */
+        .dl-all-btn {
+          display: flex; align-items: center; justify-content: center; gap: 8px;
+          width: 100%; padding: 12px;
+          background: rgba(124,58,237,0.15); border: 1px solid rgba(124,58,237,0.3);
+          color: #c4a0ff; font-size: 13px; font-weight: 600;
+          cursor: pointer; border-top: 1px solid rgba(255,255,255,0.06);
+          transition: background .15s;
+        }
+        .dl-all-btn:hover { background: rgba(124,58,237,0.25); }
+
         .err-box { max-width: 680px; margin: 0 auto 60px; background: rgba(239,68,68,0.07); border: 1px solid rgba(239,68,68,0.2); border-radius: 12px; padding: 18px 20px; position: relative; z-index: 1; }
         .err-title { font-size: 14px; font-weight: 600; color: #f87171; margin-bottom: 8px; }
         .err-detail { font-family: monospace; font-size: 11px; color: rgba(255,255,255,0.35); white-space: pre-wrap; word-break: break-all; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 6px; max-height: 140px; overflow-y: auto; }
@@ -335,7 +336,6 @@ export default function Home() {
             <p className="tool-title">Gerar clips agora</p>
             <p className="tool-sub">Faça upload do seu vídeo, escolha a duração e gere todos os clips de uma vez.</p>
 
-            {/* INPUT DE ARQUIVO */}
             <input
               ref={fileInputRef}
               type="file"
@@ -394,7 +394,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* RESULTADOS */}
         {result?.success && result.clips && result.clips.length > 0 && (
           <div className="results-wrap" ref={resultsRef}>
             <div className="results-top">
@@ -416,7 +415,10 @@ export default function Home() {
                     </video>
                     <div className="player-bottom">
                       <span className="player-size">{formatSize(activeClip.sizeKB)}</span>
-                      <a className="dl-btn" href={activeClip.clipUrl} target="_blank" rel="noopener noreferrer">↓ Baixar</a>
+                      {/* FIX: download direto sem abrir nova aba */}
+                      <a className="dl-btn" href={activeClip.clipUrl} download={activeClip.clipFilename}>
+                        ↓ Baixar
+                      </a>
                     </div>
                   </>
                 )}
@@ -435,6 +437,20 @@ export default function Home() {
                     </div>
                   ))}
                 </div>
+                {/* BOTÃO BAIXAR TODOS */}
+                <button
+                  className="dl-all-btn"
+                  onClick={() => {
+                    result.clips?.forEach((clip) => {
+                      const a = document.createElement("a");
+                      a.href = clip.clipUrl;
+                      a.download = clip.clipFilename;
+                      a.click();
+                    });
+                  }}
+                >
+                  ↓ Baixar todos os clips
+                </button>
               </div>
             </div>
           </div>
