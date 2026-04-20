@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Falha ao salvar arquivo", detail: e?.message }, { status: 500 });
     }
 
-  // ── MODO 2: URL DO YOUTUBE (JSON) ─────────────────────────────────────────
+  // ── MODO 2: URL DO YOUTUBE via YTStream RapidAPI ──────────────────────────
   } else if (contentType.includes("application/json")) {
     let body: { url?: string; duration?: number };
     try {
@@ -66,39 +66,82 @@ export async function POST(req: NextRequest) {
     const dur = body?.duration ?? 30;
     clipDuration = ALLOWED.includes(dur) ? dur : 30;
 
-    const cookiesPath = path.join(DOWNLOADS_DIR, `cookies_${timestamp}.txt`);
-    let cookiesFlag = "";
-    const cookiesEnv = process.env.YOUTUBE_COOKIES;
-    if (cookiesEnv) {
-      fs.writeFileSync(cookiesPath, cookiesEnv, "utf8");
-      cookiesFlag = `--cookies "${cookiesPath}"`;
+    const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
+    if (!RAPIDAPI_KEY) {
+      return NextResponse.json({ error: "RAPIDAPI_KEY não configurada" }, { status: 500 });
     }
 
-    function detectPython(): string {
-      for (const cmd of ["python3", "python", "py"]) {
-        try { execSync(`${cmd} --version`, { stdio: "pipe" }); return cmd; } catch { }
-      }
-      throw new Error("Python não encontrado.");
-    }
-
+    // 1. Buscar link de download via YTStream
+    let downloadUrl = "";
     try {
-      const python = detectPython();
-      const downloadCmd = `${python} -m yt_dlp -f "best[ext=mp4]/best" ${cookiesFlag} -o "${videoPath}" "${videoUrl}"`;
-      execSync(downloadCmd, { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] });
+      const encodedUrl = encodeURIComponent(videoUrl);
+      const apiRes = await fetch(
+        `https://ytstream-download-youtube-videos.p.rapidapi.com/dl?id=${encodedUrl}`,
+        {
+          method: "GET",
+          headers: {
+            "x-rapidapi-host": "ytstream-download-youtube-videos.p.rapidapi.com",
+            "x-rapidapi-key": RAPIDAPI_KEY,
+          },
+        }
+      );
+
+      if (!apiRes.ok) {
+        const errText = await apiRes.text();
+        return NextResponse.json({
+          error: "Falha na API YTStream",
+          detail: errText
+        }, { status: 500 });
+      }
+
+      const apiData = await apiRes.json();
+
+      // YTStream retorna formats com links diretos
+      const formats = apiData?.formats || apiData?.adaptiveFormats || [];
+      const mp4 = formats.find((f: { mimeType?: string; url?: string }) =>
+        f.mimeType?.includes("video/mp4") && f.url
+      );
+
+      if (mp4?.url) {
+        downloadUrl = mp4.url;
+      } else if (apiData?.url) {
+        downloadUrl = apiData.url;
+      } else {
+        return NextResponse.json({
+          error: "Nenhum formato MP4 encontrado",
+          detail: JSON.stringify(apiData).slice(0, 300)
+        }, { status: 500 });
+      }
     } catch (err: unknown) {
-      const e = err as { message?: string; stderr?: string | Buffer };
-      if (fs.existsSync(cookiesPath)) fs.unlinkSync(cookiesPath);
+      const e = err as { message?: string };
       return NextResponse.json({
-        error: "Falha no download do YouTube",
-        detail: e?.stderr?.toString?.() || e?.message
+        error: "Erro ao chamar YTStream API",
+        detail: e?.message
       }, { status: 500 });
     }
 
-    if (fs.existsSync(cookiesPath)) fs.unlinkSync(cookiesPath);
+    // 2. Baixar o vídeo da URL direta
+    try {
+      const videoRes = await fetch(downloadUrl);
+      if (!videoRes.ok) {
+        return NextResponse.json({
+          error: "Falha ao baixar vídeo do YouTube",
+          detail: `Status ${videoRes.status}`
+        }, { status: 500 });
+      }
+      const buffer = Buffer.from(await videoRes.arrayBuffer());
+      fs.writeFileSync(videoPath, buffer);
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      return NextResponse.json({
+        error: "Erro ao salvar vídeo do YouTube",
+        detail: e?.message
+      }, { status: 500 });
+    }
 
   } else {
     return NextResponse.json({
-      error: "Content-Type não suportado. Use multipart/form-data ou application/json"
+      error: "Content-Type não suportado"
     }, { status: 400 });
   }
 
