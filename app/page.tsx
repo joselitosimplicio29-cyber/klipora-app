@@ -42,7 +42,9 @@ function formatSize(kb: number) {
 }
 
 export default function Home() {
+  const [mode, setMode] = useState<"upload" | "youtube">("upload");
   const [file, setFile] = useState<File | null>(null);
+  const [youtubeUrl, setYoutubeUrl] = useState("");
   const [duration, setDuration] = useState(30);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState("");
@@ -55,6 +57,7 @@ export default function Home() {
 
   function resetAll() {
     setFile(null);
+    setYoutubeUrl("");
     setResult(null);
     setActiveClip(null);
     setTimeout(() => toolRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
@@ -78,8 +81,10 @@ export default function Home() {
     if (f) handleFile(f);
   }
 
+  const canSubmit = mode === "upload" ? !!file : youtubeUrl.startsWith("http");
+
   async function handleSubmit() {
-    if (!file) return;
+    if (!canSubmit) return;
     setLoading(true);
     setResult(null);
     setActiveClip(null);
@@ -90,11 +95,21 @@ export default function Home() {
     const iv = setInterval(() => { pi = (pi + 1) % msgs.length; setProgress(msgs[pi]); }, 6000);
 
     try {
-      const form = new FormData();
-      form.append("video", file);
-      form.append("duration", String(duration));
+      let res: Response;
 
-      const res = await fetch("/api/process-video", { method: "POST", body: form });
+      if (mode === "upload") {
+        const form = new FormData();
+        form.append("video", file!);
+        form.append("duration", String(duration));
+        res = await fetch("/api/process-video", { method: "POST", body: form });
+      } else {
+        res = await fetch("/api/process-video", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: youtubeUrl, duration }),
+        });
+      }
+
       const data: ApiResponse = await res.json();
       setResult(data);
       if (data.success && data.clips?.length) {
@@ -184,6 +199,31 @@ export default function Home() {
         }
         .tool-title { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 700; margin-bottom: 6px; }
         .tool-sub { font-size: 14px; color: rgba(255,255,255,0.5); margin-bottom: 24px; }
+
+        /* TABS */
+        .mode-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 24px; }
+        .mode-tab {
+          padding: 11px; border-radius: 10px; font-size: 14px; font-weight: 600;
+          cursor: pointer; border: 1px solid rgba(255,255,255,0.1);
+          background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.4);
+          transition: all .15s; display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .mode-tab:hover { border-color: rgba(124,58,237,0.4); color: #fff; }
+        .mode-tab.on { background: rgba(124,58,237,0.2); border-color: #7c3aed; color: #fff; }
+
+        /* YOUTUBE INPUT */
+        .yt-input-wrap { margin-bottom: 20px; }
+        .yt-input {
+          width: 100%; padding: 14px 16px;
+          background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12);
+          border-radius: 10px; color: #fff; font-size: 14px; outline: none;
+          transition: border-color .2s;
+        }
+        .yt-input::placeholder { color: rgba(255,255,255,0.3); }
+        .yt-input:focus { border-color: #7c3aed; }
+        .yt-input.valid { border-color: rgba(124,58,237,0.6); }
+        .yt-hint { font-size: 12px; color: rgba(255,255,255,0.3); margin-top: 8px; }
+
         .drop-zone {
           border: 2px dashed rgba(124,58,237,0.3); border-radius: 12px;
           padding: 36px 24px; text-align: center; cursor: pointer;
@@ -334,7 +374,17 @@ export default function Home() {
         <div className="tool-wrap" id="tool" ref={toolRef}>
           <div className="tool-card">
             <p className="tool-title">Gerar clips agora</p>
-            <p className="tool-sub">Faça upload do seu vídeo, escolha a duração e gere todos os clips de uma vez.</p>
+            <p className="tool-sub">Escolha o modo, selecione o vídeo e gere todos os clips de uma vez.</p>
+
+            {/* TABS */}
+            <div className="mode-tabs">
+              <button className={`mode-tab${mode === "upload" ? " on" : ""}`} onClick={() => setMode("upload")}>
+                🎬 Upload de arquivo
+              </button>
+              <button className={`mode-tab${mode === "youtube" ? " on" : ""}`} onClick={() => setMode("youtube")}>
+                ▶️ Link do YouTube
+              </button>
+            </div>
 
             <input
               ref={fileInputRef}
@@ -344,27 +394,44 @@ export default function Home() {
               onChange={onFileChange}
             />
 
-            {!file ? (
-              <div
-                className={`drop-zone${isDragging ? " drag" : ""}`}
-                onClick={() => fileInputRef.current?.click()}
-                onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                onDragLeave={() => setIsDragging(false)}
-                onDrop={onDrop}
-              >
-                <div className="drop-icon">🎬</div>
-                <p className="drop-text">Arraste o vídeo aqui ou clique para selecionar</p>
-                <p className="drop-sub">Selecione um arquivo do seu dispositivo</p>
-                <p className="drop-formats">MP4 · MOV · AVI · WebM · MKV</p>
-              </div>
-            ) : (
-              <div className="file-selected">
-                <span className="file-icon">🎬</span>
-                <div className="file-info">
-                  <p className="file-name">{file.name}</p>
-                  <p className="file-size">{formatSize(Math.round(file.size / 1024))}</p>
+            {/* MODO UPLOAD */}
+            {mode === "upload" && (
+              !file ? (
+                <div
+                  className={`drop-zone${isDragging ? " drag" : ""}`}
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                  onDragLeave={() => setIsDragging(false)}
+                  onDrop={onDrop}
+                >
+                  <div className="drop-icon">🎬</div>
+                  <p className="drop-text">Arraste o vídeo aqui ou clique para selecionar</p>
+                  <p className="drop-sub">Selecione um arquivo do seu dispositivo</p>
+                  <p className="drop-formats">MP4 · MOV · AVI · WebM · MKV</p>
                 </div>
-                <button className="file-change" onClick={() => { setFile(null); setResult(null); }}>Trocar</button>
+              ) : (
+                <div className="file-selected">
+                  <span className="file-icon">🎬</span>
+                  <div className="file-info">
+                    <p className="file-name">{file.name}</p>
+                    <p className="file-size">{formatSize(Math.round(file.size / 1024))}</p>
+                  </div>
+                  <button className="file-change" onClick={() => { setFile(null); setResult(null); }}>Trocar</button>
+                </div>
+              )
+            )}
+
+            {/* MODO YOUTUBE */}
+            {mode === "youtube" && (
+              <div className="yt-input-wrap">
+                <input
+                  className={`yt-input${youtubeUrl.startsWith("http") ? " valid" : ""}`}
+                  type="url"
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  value={youtubeUrl}
+                  onChange={(e) => setYoutubeUrl(e.target.value)}
+                />
+                <p className="yt-hint">Cole o link do vídeo do YouTube que deseja cortar em clips</p>
               </div>
             )}
 
@@ -380,7 +447,7 @@ export default function Home() {
               ))}
             </div>
 
-            <button className="submit-btn" onClick={handleSubmit} disabled={loading || !file}>
+            <button className="submit-btn" onClick={handleSubmit} disabled={loading || !canSubmit}>
               {loading ? progress || "Processando..." : "⚡ Gerar todos os clips"}
             </button>
 
