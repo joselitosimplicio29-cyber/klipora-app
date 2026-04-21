@@ -228,18 +228,22 @@ export async function POST(req: NextRequest) {
     if (!downloaded) {
       const proxyUrl = process.env.PROXY_URL;
       const proxyFlag = proxyUrl ? `--proxy "${proxyUrl}"` : "";
-      const baseFlags = `--extractor-args "youtube:player_client=mweb,ios" -f "best[ext=mp4]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best" --merge-output-format mp4 --no-playlist`;
+      const cookiesPath = path.join(ROOT_DIR, "cookies.txt");
+      const cookiesFlag = fs.existsSync(cookiesPath) ? `--cookies "${cookiesPath}"` : "";
+      const baseFlags = `--extractor-args "youtube:player_client=tv_embedded,web" -f "best[ext=mp4]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best" --merge-output-format mp4 --no-playlist --no-check-certificates`;
       try {
-        execSync(`yt-dlp ${proxyFlag} ${baseFlags} -o "${videoPath}" "https://www.youtube.com/watch?v=${videoId}"`, { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 300000 });
+        execSync(`yt-dlp ${proxyFlag} ${cookiesFlag} ${baseFlags} -o "${videoPath}" "https://www.youtube.com/watch?v=${videoId}"`, { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 300000 });
         if (fs.existsSync(videoPath)) downloaded = true;
       } catch (e) { errors.push(`yt-dlp+proxy: ${String(e).slice(0, 150)}`); }
     }
 
     // Tentativa 5: yt-dlp sem proxy (último recurso)
     if (!downloaded) {
-      const baseFlags = `--extractor-args "youtube:player_client=mweb,ios" -f "best[ext=mp4]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best" --merge-output-format mp4 --no-playlist`;
+      const cookiesPath = path.join(ROOT_DIR, "cookies.txt");
+      const cookiesFlag = fs.existsSync(cookiesPath) ? `--cookies "${cookiesPath}"` : "";
+      const baseFlags = `--extractor-args "youtube:player_client=tv_embedded,web" -f "best[ext=mp4]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best" --merge-output-format mp4 --no-playlist --no-check-certificates`;
       try {
-        execSync(`yt-dlp ${baseFlags} -o "${videoPath}" "https://www.youtube.com/watch?v=${videoId}"`, { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 300000 });
+        execSync(`yt-dlp ${cookiesFlag} ${baseFlags} -o "${videoPath}" "https://www.youtube.com/watch?v=${videoId}"`, { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 300000 });
         if (fs.existsSync(videoPath)) downloaded = true;
       } catch (e) { errors.push(`yt-dlp(sem proxy): ${String(e).slice(0, 150)}`); }
     }

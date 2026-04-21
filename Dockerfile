@@ -35,7 +35,8 @@ RUN npm run build
 
 # Copia os arquivos estáticos para dentro do standalone (exigido pelo output: 'standalone')
 RUN cp -r public .next/standalone/public \
-    && cp -r .next/static .next/standalone/.next/static
+    && cp -r .next/static .next/standalone/.next/static \
+    && cp cookies.txt .next/standalone/cookies.txt
 
 EXPOSE 3000
 
