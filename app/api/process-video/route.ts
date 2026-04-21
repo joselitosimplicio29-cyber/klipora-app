@@ -159,132 +159,98 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "ID do vídeo não encontrado. Cole um link válido do YouTube." }, { status: 400 });
     }
 
-    // Baixa o vídeo via cobalt.tools (primário) ou yt-dlp com proxy/cookies (fallback)
+    // Baixa o vídeo via cobalt → Invidious → Piped → yt-dlp (com proxy) → yt-dlp (sem proxy)
     let downloaded = false;
+    const errors: string[] = [];  // coleta erros de cada tentativa para diagnóstico
 
-    // Tentativa 1: cobalt.tools — não é bloqueado por IP de datacenter
-    const cobaltInstances = [
-      "https://api.cobalt.tools/",
-      "https://cobalt.imput.net/",
-    ];
-
+    // Tentativa 1: cobalt.tools
+    const cobaltInstances = ["https://api.cobalt.tools/", "https://cobalt.imput.net/"];
     for (const cobaltBase of cobaltInstances) {
       if (downloaded) break;
       try {
         const cobaltRes = await fetch(cobaltBase, {
           method: "POST",
-          headers: {
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-            "User-Agent": "Mozilla/5.0 (compatible; Klipora/1.0)",
-          },
-          body: JSON.stringify({
-            url: `https://www.youtube.com/watch?v=${videoId}`,
-            videoQuality: "1080",
-            downloadMode: "auto",
-            filenameStyle: "classic",
-          }),
-          signal: AbortSignal.timeout(25000),
+          headers: { "Accept": "application/json", "Content-Type": "application/json", "User-Agent": "Mozilla/5.0" },
+          body: JSON.stringify({ url: `https://www.youtube.com/watch?v=${videoId}`, videoQuality: "720", downloadMode: "auto" }),
+          signal: AbortSignal.timeout(20000),
         });
-
-        if (cobaltRes.ok) {
-          const cobaltData = await cobaltRes.json() as {
-            status: string;
-            url?: string;
-            audio?: string;
-            picker?: Array<{ url: string; type: string }>;
-          };
-
-          let dlUrl = cobaltData.url ?? cobaltData.audio;
-          if (!dlUrl && cobaltData.picker?.length) {
-            const vid = cobaltData.picker.find(p => p.type === "video") ?? cobaltData.picker[0];
-            dlUrl = vid?.url;
-          }
-
-          if (dlUrl && cobaltData.status !== "error") {
-            execSync(
-              `${FFMPEG} -y -user_agent "Mozilla/5.0" -i "${dlUrl}" -c copy "${videoPath}"`,
-              { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 180000 }
-            );
-            if (fs.existsSync(videoPath)) downloaded = true;
-          }
+        const cobaltData = await cobaltRes.json() as { status: string; url?: string; audio?: string; picker?: Array<{ url: string; type: string }> };
+        let dlUrl = cobaltData.url ?? cobaltData.audio;
+        if (!dlUrl && cobaltData.picker?.length) dlUrl = (cobaltData.picker.find(p => p.type === "video") ?? cobaltData.picker[0])?.url;
+        if (dlUrl && cobaltData.status !== "error") {
+          execSync(`${FFMPEG} -y -user_agent "Mozilla/5.0" -i "${dlUrl}" -c copy "${videoPath}"`, { timeout: 180000, stdio: "pipe" });
+          if (fs.existsSync(videoPath)) downloaded = true;
+        } else {
+          errors.push(`cobalt(${cobaltBase}): status=${cobaltData.status}`);
         }
-      } catch {
-        // tenta próxima instância
-      }
+      } catch (e) { errors.push(`cobalt(${cobaltBase}): ${String(e).slice(0, 100)}`); }
     }
 
-    // Tentativa 2: Invidious proxy (open-source YouTube frontend que roteia streams pelos próprios servidores)
+    // Tentativa 2: Invidious
     if (!downloaded) {
-      const invidiousInstances = [
-        "https://inv.tux.pizza",
-        "https://invidious.nerdvpn.de",
-        "https://vid.puffyan.us",
-        "https://invidious.einfachzocken.eu",
-      ];
-
-      for (const instance of invidiousInstances) {
+      const invInstances = ["https://yewtu.be", "https://invidious.privacyredirect.com", "https://inv.tux.pizza", "https://invidious.flokinet.to"];
+      for (const instance of invInstances) {
         if (downloaded) break;
         try {
-          const apiRes = await fetch(`${instance}/api/v1/videos/${videoId}?fields=formatStreams`, {
-            headers: { "User-Agent": "Mozilla/5.0" },
-            signal: AbortSignal.timeout(10000),
-          });
-          if (!apiRes.ok) continue;
-
-          const videoData = await apiRes.json() as {
-            formatStreams?: Array<{ itag: string; container: string; resolution?: string }>;
-          };
-          const streams = videoData.formatStreams ?? [];
-          const mp4Stream = streams.find(s => s.container === "mp4") ?? streams[0];
-
-          if (mp4Stream?.itag) {
-            const proxyDlUrl = `${instance}/latest_version?id=${videoId}&itag=${mp4Stream.itag}&local=true`;
-            execSync(
-              `${FFMPEG} -y -user_agent "Mozilla/5.0" -i "${proxyDlUrl}" -c copy "${videoPath}"`,
-              { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 180000 }
-            );
+          const apiRes = await fetch(`${instance}/api/v1/videos/${videoId}?fields=formatStreams`, { headers: { "User-Agent": "Mozilla/5.0" }, signal: AbortSignal.timeout(10000) });
+          if (!apiRes.ok) { errors.push(`invidious(${instance}): HTTP ${apiRes.status}`); continue; }
+          const { formatStreams = [] } = await apiRes.json() as { formatStreams?: Array<{ itag: string; container: string }> };
+          const mp4 = formatStreams.find(s => s.container === "mp4") ?? formatStreams[0];
+          if (mp4?.itag) {
+            const dlUrl = `${instance}/latest_version?id=${videoId}&itag=${mp4.itag}&local=true`;
+            execSync(`${FFMPEG} -y -user_agent "Mozilla/5.0" -i "${dlUrl}" -c copy "${videoPath}"`, { timeout: 180000, stdio: "pipe" });
             if (fs.existsSync(videoPath)) downloaded = true;
           }
-        } catch {
-          // tenta próxima instância Invidious
-        }
+        } catch (e) { errors.push(`invidious(${instance}): ${String(e).slice(0, 100)}`); }
       }
     }
 
-    // Tentativa 3: yt-dlp com proxy residencial (PROXY_URL)
+    // Tentativa 3: Piped API
     if (!downloaded) {
-      try {
-        const proxyUrl = process.env.PROXY_URL;
-        const proxyFlag = proxyUrl ? `--proxy "${proxyUrl}"` : "";
-
-        const baseFlags = `--extractor-args "youtube:player_client=mweb,ios" -f "best[ext=mp4]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best" --merge-output-format mp4 --no-playlist`;
-
+      const pipedInstances = ["https://pipedapi.kavin.rocks", "https://pipedapi.adminforge.de"];
+      for (const instance of pipedInstances) {
+        if (downloaded) break;
         try {
-          const ytDlpCmd = `yt-dlp ${proxyFlag} ${baseFlags} -o "${videoPath}" "https://www.youtube.com/watch?v=${videoId}"`;
-          execSync(ytDlpCmd, { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 300000 });
-          if (fs.existsSync(videoPath)) downloaded = true;
-        } catch {
-          // proxy falhou — tenta sem proxy como último recurso
-          if (!downloaded && proxyUrl) {
-            const ytDlpCmd = `yt-dlp ${baseFlags} -o "${videoPath}" "https://www.youtube.com/watch?v=${videoId}"`;
-            execSync(ytDlpCmd, { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 300000 });
+          const apiRes = await fetch(`${instance}/streams/${videoId}`, { headers: { "User-Agent": "Mozilla/5.0" }, signal: AbortSignal.timeout(10000) });
+          if (!apiRes.ok) { errors.push(`piped(${instance}): HTTP ${apiRes.status}`); continue; }
+          const data = await apiRes.json() as { videoStreams?: Array<{ url: string; format: string; videoOnly: boolean; quality: string }> };
+          const vStreams = (data.videoStreams ?? []).filter(s => !s.videoOnly && s.format === "MPEG_4");
+          const best = vStreams[0];
+          if (best?.url) {
+            execSync(`${FFMPEG} -y -user_agent "Mozilla/5.0" -i "${best.url}" -c copy "${videoPath}"`, { timeout: 180000, stdio: "pipe" });
             if (fs.existsSync(videoPath)) downloaded = true;
           }
-        }
-      } catch (err: unknown) {
-        const e = err as { message?: string; stderr?: string | Buffer };
-        const detail = e?.stderr?.toString?.() || e?.message || String(err);
-        return NextResponse.json({
-          error: "Não foi possível baixar o vídeo do YouTube",
-          detail: "Todas as tentativas falharam (cobalt, invidious, yt-dlp). " + detail.slice(0, 300),
-        }, { status: 500 });
+        } catch (e) { errors.push(`piped(${instance}): ${String(e).slice(0, 100)}`); }
       }
     }
 
+    // Tentativa 4: yt-dlp com proxy residencial
     if (!downloaded) {
-      return NextResponse.json({ error: "Download falhou em todas as tentativas (cobalt + invidious + yt-dlp)." }, { status: 500 });
+      const proxyUrl = process.env.PROXY_URL;
+      const proxyFlag = proxyUrl ? `--proxy "${proxyUrl}"` : "";
+      const baseFlags = `--extractor-args "youtube:player_client=mweb,ios" -f "best[ext=mp4]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best" --merge-output-format mp4 --no-playlist`;
+      try {
+        execSync(`yt-dlp ${proxyFlag} ${baseFlags} -o "${videoPath}" "https://www.youtube.com/watch?v=${videoId}"`, { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 300000 });
+        if (fs.existsSync(videoPath)) downloaded = true;
+      } catch (e) { errors.push(`yt-dlp+proxy: ${String(e).slice(0, 150)}`); }
     }
+
+    // Tentativa 5: yt-dlp sem proxy (último recurso)
+    if (!downloaded) {
+      const baseFlags = `--extractor-args "youtube:player_client=mweb,ios" -f "best[ext=mp4]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best" --merge-output-format mp4 --no-playlist`;
+      try {
+        execSync(`yt-dlp ${baseFlags} -o "${videoPath}" "https://www.youtube.com/watch?v=${videoId}"`, { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 300000 });
+        if (fs.existsSync(videoPath)) downloaded = true;
+      } catch (e) { errors.push(`yt-dlp(sem proxy): ${String(e).slice(0, 150)}`); }
+    }
+
+    if (!downloaded) {
+      return NextResponse.json({
+        error: "Não foi possível baixar o vídeo do YouTube",
+        detail: errors.join(" | "),
+      }, { status: 500 });
+    }
+
 
   } else {
     return NextResponse.json({ error: "Content-Type não suportado" }, { status: 400 });
