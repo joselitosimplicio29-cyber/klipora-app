@@ -139,17 +139,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Erro ao chamar YTStream API", detail: e?.message }, { status: 500 });
     }
 
-    // Baixa o vídeo via URL obtida da API
+    // Baixa o vídeo usando ffmpeg (lida melhor com URLs de streaming do YouTube)
     try {
-      const videoRes = await fetch(downloadUrl, { signal: AbortSignal.timeout(120000) });
-      if (!videoRes.ok) {
-        return NextResponse.json({ error: "Falha ao baixar vídeo da URL da API", detail: `Status ${videoRes.status}` }, { status: 500 });
-      }
-      const buffer = Buffer.from(await videoRes.arrayBuffer());
-      fs.writeFileSync(videoPath, buffer);
+      const ffmpegDownloadCmd = `${FFMPEG} -y -user_agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" -i "${downloadUrl}" -c copy "${videoPath}"`;
+      execSync(ffmpegDownloadCmd, { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 180000 });
     } catch (err: unknown) {
-      const e = err as { message?: string };
-      return NextResponse.json({ error: "Erro ao salvar vídeo", detail: e?.message }, { status: 500 });
+      const e = err as { message?: string; stderr?: string | Buffer };
+      const detail = e?.stderr?.toString?.() || e?.message || String(err);
+      return NextResponse.json({ error: "Erro ao baixar vídeo com ffmpeg", detail: detail.slice(0, 500) }, { status: 500 });
     }
 
   } else {
