@@ -162,9 +162,29 @@ export async function POST(req: NextRequest) {
     // Baixa o vídeo diretamente com yt-dlp (mais confiável que ffmpeg + RapidAPI)
     try {
       const ytUrl = `https://www.youtube.com/watch?v=${videoId}`;
-      // mweb = cliente mobile web, mais eficaz em servidores cloud (menos bloqueado pelo YouTube)
-      const ytDlpCmd = `yt-dlp --extractor-args "youtube:player_client=mweb,ios" -f "best[ext=mp4]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best" --merge-output-format mp4 --no-playlist -o "${videoPath}" "${ytUrl}"`;
+
+      // Monta flag de cookies: prioriza variável de ambiente, depois arquivo local
+      let cookiesFlag = "";
+      const cookiesEnv = process.env.YOUTUBE_COOKIES;
+      const cookiesFilePath = path.join(ROOT_DIR, "cookies.txt");
+
+      if (cookiesEnv) {
+        // Escreve cookies da env var em arquivo temporário
+        const tmpCookies = path.join(DOWNLOADS_DIR, `cookies_${timestamp}.txt`);
+        fs.writeFileSync(tmpCookies, cookiesEnv, "utf-8");
+        cookiesFlag = `--cookies "${tmpCookies}"`;
+      } else if (fs.existsSync(cookiesFilePath)) {
+        cookiesFlag = `--cookies "${cookiesFilePath}"`;
+      }
+
+      const ytDlpCmd = `yt-dlp ${cookiesFlag} --extractor-args "youtube:player_client=mweb,ios" -f "best[ext=mp4]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best" --merge-output-format mp4 --no-playlist -o "${videoPath}" "${ytUrl}"`;
       execSync(ytDlpCmd, { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 300000 });
+
+      // Remove cookies temporários após uso
+      if (cookiesEnv) {
+        const tmpCookies = path.join(DOWNLOADS_DIR, `cookies_${timestamp}.txt`);
+        try { fs.unlinkSync(tmpCookies); } catch { }
+      }
     } catch (err: unknown) {
       const e = err as { message?: string; stderr?: string | Buffer };
       const detail = e?.stderr?.toString?.() || e?.message || String(err);
