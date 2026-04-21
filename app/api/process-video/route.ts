@@ -162,8 +162,8 @@ export async function POST(req: NextRequest) {
     // Baixa o vídeo diretamente com yt-dlp (mais confiável que ffmpeg + RapidAPI)
     try {
       const ytUrl = `https://www.youtube.com/watch?v=${videoId}`;
-      // Usa o cliente Android para bypassar bloqueio de IP em servidores cloud
-      const ytDlpCmd = `yt-dlp --extractor-args "youtube:player_client=android,web" -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" --merge-output-format mp4 --no-playlist --no-check-certificate -o "${videoPath}" "${ytUrl}"`;
+      // mweb = cliente mobile web, mais eficaz em servidores cloud (menos bloqueado pelo YouTube)
+      const ytDlpCmd = `yt-dlp --extractor-args "youtube:player_client=mweb,ios" -f "best[ext=mp4]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best" --merge-output-format mp4 --no-playlist -o "${videoPath}" "${ytUrl}"`;
       execSync(ytDlpCmd, { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 300000 });
     } catch (err: unknown) {
       const e = err as { message?: string; stderr?: string | Buffer };
