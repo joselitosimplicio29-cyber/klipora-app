@@ -88,65 +88,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "ID do vídeo não encontrado. Cole um link válido do YouTube." }, { status: 400 });
     }
 
-    // Chave da RapidAPI (configurar no Railway: RAPIDAPI_KEY)
-    const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
-    if (!RAPIDAPI_KEY) {
-      return NextResponse.json({ error: "RAPIDAPI_KEY não configurada no servidor" }, { status: 500 });
-    }
-
-    // Usa a RapidAPI YTStream para obter a URL de download
-    let downloadUrl = "";
+    // Baixa o vídeo diretamente com yt-dlp (mais confiável que ffmpeg + RapidAPI)
     try {
-      const apiRes = await fetch(
-        `https://ytstream-download-youtube-videos.p.rapidapi.com/dl?id=${videoId}`,
-        {
-          method: "GET",
-          headers: {
-            "x-rapidapi-host": "ytstream-download-youtube-videos.p.rapidapi.com",
-            "x-rapidapi-key": RAPIDAPI_KEY,
-          },
-        }
-      );
-
-      if (!apiRes.ok) {
-        const errText = await apiRes.text();
-        return NextResponse.json({ error: "Falha na API YTStream", detail: errText.slice(0, 300) }, { status: 500 });
-      }
-
-      const apiData = await apiRes.json();
-
-      // Tenta encontrar o melhor formato MP4 com áudio
-      const allFormats = [...(apiData?.formats || []), ...(apiData?.adaptiveFormats || [])];
-      const mp4WithAudio = allFormats.find((f: { mimeType?: string; url?: string; audioQuality?: string }) =>
-        f.mimeType?.includes("video/mp4") && f.url && f.audioQuality
-      );
-      const mp4Any = allFormats.find((f: { mimeType?: string; url?: string }) =>
-        f.mimeType?.includes("video/mp4") && f.url
-      );
-
-      if (mp4WithAudio?.url) downloadUrl = mp4WithAudio.url;
-      else if (mp4Any?.url) downloadUrl = mp4Any.url;
-      else if (apiData?.url) downloadUrl = apiData.url;
-      else {
-        return NextResponse.json({
-          error: "Nenhum formato MP4 encontrado na resposta da API",
-          formatsDisponíveis: allFormats.map((f: { mimeType?: string }) => f.mimeType).slice(0, 10),
-        }, { status: 500 });
-      }
-
-    } catch (err: unknown) {
-      const e = err as { message?: string };
-      return NextResponse.json({ error: "Erro ao chamar YTStream API", detail: e?.message }, { status: 500 });
-    }
-
-    // Baixa o vídeo usando ffmpeg (lida melhor com URLs de streaming do YouTube)
-    try {
-      const ffmpegDownloadCmd = `${FFMPEG} -y -user_agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" -i "${downloadUrl}" -c copy "${videoPath}"`;
-      execSync(ffmpegDownloadCmd, { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 180000 });
+      const ytUrl = `https://www.youtube.com/watch?v=${videoId}`;
+      const ytDlpCmd = `yt-dlp -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" --merge-output-format mp4 --no-playlist -o "${videoPath}" "${ytUrl}"`;
+      execSync(ytDlpCmd, { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 300000 });
     } catch (err: unknown) {
       const e = err as { message?: string; stderr?: string | Buffer };
       const detail = e?.stderr?.toString?.() || e?.message || String(err);
-      return NextResponse.json({ error: "Erro ao baixar vídeo com ffmpeg", detail: detail.slice(0, 500) }, { status: 500 });
+      return NextResponse.json({ error: "Erro ao baixar vídeo do YouTube", detail: detail.slice(0, 500) }, { status: 500 });
     }
 
   } else {
