@@ -23,9 +23,38 @@ async function uploadToR2(filePath: string, key: string): Promise<string> {
   return `${process.env.R2_PUBLIC_URL}/${key}`;
 }
 
-async function generateSubtitle(clipPath: string): Promise<string> {
+async function uploadTextToR2(content: string, key: string, contentType: string): Promise<string> {
+  await r2.send(new PutObjectCommand({
+    Bucket: process.env.R2_BUCKET!,
+    Key: key,
+    Body: Buffer.from(content, "utf-8"),
+    ContentType: contentType,
+  }));
+  return `${process.env.R2_PUBLIC_URL}/${key}`;
+}
+
+function secondsToVTT(s: number): string {
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = (s % 60).toFixed(3).padStart(6, "0");
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${sec}`;
+}
+
+function buildVTT(segments: Array<{ start: number; end: number; text: string }>): string {
+  let vtt = "WEBVTT\n\n";
+  for (const seg of segments) {
+    const text = seg.text.trim();
+    if (!text) continue;
+    vtt += `${secondsToVTT(seg.start)} --> ${secondsToVTT(seg.end)}\n${text}\n\n`;
+  }
+  return vtt;
+}
+
+async function generateSubtitles(
+  clipPath: string
+): Promise<{ vttContent: string; subtitle: string }> {
   const GROQ_API_KEY = process.env.GROQ_API_KEY;
-  if (!GROQ_API_KEY) return "";
+  if (!GROQ_API_KEY) return { vttContent: "", subtitle: "" };
 
   const audioPath = clipPath.replace(".mp4", "_audio.mp3");
   try {
@@ -38,7 +67,7 @@ async function generateSubtitle(clipPath: string): Promise<string> {
     const groqForm = new FormData();
     groqForm.append("file", new Blob([audioBuffer], { type: "audio/mpeg" }), "audio.mp3");
     groqForm.append("model", "whisper-large-v3-turbo");
-    groqForm.append("response_format", "text");
+    groqForm.append("response_format", "verbose_json");
 
     const groqRes = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
       method: "POST",
@@ -47,14 +76,22 @@ async function generateSubtitle(clipPath: string): Promise<string> {
     });
 
     if (groqRes.ok) {
-      return (await groqRes.text()).trim();
+      const data = await groqRes.json() as {
+        text?: string;
+        segments?: Array<{ start: number; end: number; text: string }>;
+      };
+      const segments = data.segments ?? [];
+      return {
+        vttContent: buildVTT(segments),
+        subtitle: data.text?.trim() ?? "",
+      };
     }
   } catch {
     // Legendas são opcionais — não interrompe o fluxo
   } finally {
     try { fs.unlinkSync(audioPath); } catch { }
   }
-  return "";
+  return { vttContent: "", subtitle: "" };
 }
 
 export async function POST(req: NextRequest) {
@@ -166,6 +203,7 @@ export async function POST(req: NextRequest) {
     sizeKB: number;
     index: number;
     subtitle: string;
+    captions_url: string;
   }[] = [];
   const clipErrors: string[] = [];
 
@@ -186,8 +224,15 @@ export async function POST(req: NextRequest) {
         const sizeKB = Math.round(fs.statSync(clipPath).size / 1024);
         const r2Key = `clips/${clipFilename}`;
 
-        // Gera legenda automática via Groq Whisper (opcional)
-        const subtitle = await generateSubtitle(clipPath);
+        // Gera legendas sincronizadas via Groq Whisper (opcional)
+        const { vttContent, subtitle } = await generateSubtitles(clipPath);
+
+        // Faz upload do VTT para o R2 se gerado
+        let captions_url = "";
+        if (vttContent) {
+          const vttKey = `captions/${clipFilename.replace(".mp4", ".vtt")}`;
+          captions_url = await uploadTextToR2(vttContent, vttKey, "text/vtt");
+        }
 
         const publicUrl = await uploadToR2(clipPath, r2Key);
 
@@ -199,6 +244,7 @@ export async function POST(req: NextRequest) {
           end: start + clipDuration,
           sizeKB,
           subtitle,
+          captions_url,
         });
 
         try { fs.unlinkSync(clipPath); } catch { }

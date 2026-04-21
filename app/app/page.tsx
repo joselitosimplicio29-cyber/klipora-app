@@ -10,6 +10,7 @@ interface Clip {
   end: number;
   sizeKB: number;
   subtitle?: string;
+  captions_url?: string;
 }
 
 interface ApiResponse {
@@ -625,19 +626,46 @@ export default function AppPage() {
                       </span>
                     </div>
 
-                    <video key={activeClip.clipUrl} controls autoPlay>
+                    <video key={activeClip.clipUrl} controls autoPlay crossOrigin="anonymous">
                       <source src={activeClip.clipUrl} type="video/mp4" />
+                      {activeClip.captions_url && (
+                        <track
+                          kind="subtitles"
+                          src={activeClip.captions_url}
+                          srcLang="pt"
+                          label="Português"
+                          default
+                        />
+                      )}
                     </video>
 
                     <div className="player-bottom">
                       <span>{formatSize(activeClip.sizeKB)}</span>
-                      <a
-                        className="download"
-                        href={activeClip.clipUrl}
-                        download={activeClip.clipFilename}
-                      >
-                        Baixar
-                      </a>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                        {activeClip.captions_url && (
+                          <a
+                            href={activeClip.captions_url}
+                            download={activeClip.clipFilename?.replace(".mp4", ".vtt")}
+                            style={{
+                              color: "#c4a0ff",
+                              fontSize: 12,
+                              padding: "6px 10px",
+                              border: "1px solid rgba(124,58,237,0.4)",
+                              borderRadius: 6,
+                              textDecoration: "none",
+                            }}
+                          >
+                            🎤 .VTT
+                          </a>
+                        )}
+                        <a
+                          className="download"
+                          href={activeClip.clipUrl}
+                          download={activeClip.clipFilename}
+                        >
+                          Baixar
+                        </a>
+                      </div>
                     </div>
 
                     {activeClip.subtitle && (
@@ -650,7 +678,7 @@ export default function AppPage() {
                         background: "rgba(124,58,237,0.06)",
                       }}>
                         <div style={{ color: "#c4a0ff", fontWeight: 700, marginBottom: 6, fontSize: 11, textTransform: "uppercase", letterSpacing: 1 }}>
-                          🎤 Legenda automática
+                          🎤 Transcrição
                         </div>
                         {activeClip.subtitle}
                       </div>
