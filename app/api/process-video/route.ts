@@ -222,7 +222,6 @@ export async function POST(req: NextRequest) {
         // Proxy residencial (bypassa bloqueio de IP de datacenter)
         // Tenta HTTP primeiro, depois SOCKS5 se falhar
         const proxyUrl = process.env.PROXY_URL;
-        const ytUrl = `https://www.youtube.com/watch?v=${videoId}`;
 
         const baseFlags = `--extractor-args "youtube:player_client=mweb,ios" -f "best[ext=mp4]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best" --merge-output-format mp4 --no-playlist --source-address 0.0.0.0`;
 
