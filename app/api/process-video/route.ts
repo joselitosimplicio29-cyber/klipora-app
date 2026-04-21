@@ -271,14 +271,14 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Tentativa 4: yt-dlp com proxy residencial
+    // Tentativa 4: yt-dlp com proxy + cliente iOS (bypassa n-challenge)
     if (!downloaded) {
       const proxyUrl = process.env.PROXY_URL;
       const proxyFlag = proxyUrl ? `--proxy "${proxyUrl}"` : "";
       const resolvedCookies = ensureCookiesFile();
       const cookiesFlag = resolvedCookies ? `--cookies "${resolvedCookies}"` : "";
-      // Usa formato simples para máxima compatibilidade (sem --merge-output-format)
-      const baseFlags = `--extractor-args "youtube:player_client=tv_embedded,web" -f "best[ext=mp4]/best" --no-playlist --no-check-certificates --socket-timeout 30`;
+      // iOS client retorna URLs pré-assinadas, não precisa de n-challenge JS
+      const baseFlags = `--extractor-args "youtube:player_client=ios" -f "best[ext=mp4]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best" --no-playlist --no-check-certificates --socket-timeout 30`;
       try {
         execSync(
           `yt-dlp ${proxyFlag} ${cookiesFlag} ${baseFlags} -o "${videoPath}" "https://www.youtube.com/watch?v=${videoId}"`,
@@ -288,15 +288,15 @@ export async function POST(req: NextRequest) {
       } catch (e) {
         const err = e as { stderr?: string | Buffer; stdout?: string | Buffer; message?: string };
         const detail = (err?.stderr?.toString?.() || err?.message || String(e)).slice(0, 1000);
-        errors.push(`yt-dlp+proxy: ${detail}`);
+        errors.push(`yt-dlp+proxy+ios: ${detail}`);
       }
     }
 
-    // Tentativa 5: yt-dlp sem proxy
+    // Tentativa 5: yt-dlp sem proxy + cliente iOS
     if (!downloaded) {
       const resolvedCookies = ensureCookiesFile();
       const cookiesFlag = resolvedCookies ? `--cookies "${resolvedCookies}"` : "";
-      const baseFlags = `--extractor-args "youtube:player_client=tv_embedded,web" -f "best[ext=mp4]/best" --no-playlist --no-check-certificates --socket-timeout 30`;
+      const baseFlags = `--extractor-args "youtube:player_client=ios" -f "best[ext=mp4]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best" --no-playlist --no-check-certificates --socket-timeout 30`;
       try {
         execSync(
           `yt-dlp ${cookiesFlag} ${baseFlags} -o "${videoPath}" "https://www.youtube.com/watch?v=${videoId}"`,
@@ -306,24 +306,41 @@ export async function POST(req: NextRequest) {
       } catch (e) {
         const err = e as { stderr?: string | Buffer; stdout?: string | Buffer; message?: string };
         const detail = (err?.stderr?.toString?.() || err?.message || String(e)).slice(0, 1000);
-        errors.push(`yt-dlp(sem proxy): ${detail}`);
+        errors.push(`yt-dlp+ios: ${detail}`);
       }
     }
 
-    // Tentativa 6: yt-dlp mínimo (player_client=web) como último recurso
+    // Tentativa 6: yt-dlp com cliente Android (outra alternativa sem n-challenge)
     if (!downloaded) {
       const resolvedCookies = ensureCookiesFile();
       const cookiesFlag = resolvedCookies ? `--cookies "${resolvedCookies}"` : "";
       try {
         execSync(
-          `yt-dlp ${cookiesFlag} --extractor-args "youtube:player_client=web" -f best --no-playlist --no-check-certificates -o "${videoPath}" "https://www.youtube.com/watch?v=${videoId}"`,
+          `yt-dlp ${cookiesFlag} --extractor-args "youtube:player_client=android" -f "best[ext=mp4]/best" --no-playlist --no-check-certificates -o "${videoPath}" "https://www.youtube.com/watch?v=${videoId}"`,
           { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 300000 }
         );
         if (fs.existsSync(videoPath)) downloaded = true;
       } catch (e) {
         const err = e as { stderr?: string | Buffer; stdout?: string | Buffer; message?: string };
         const detail = (err?.stderr?.toString?.() || err?.message || String(e)).slice(0, 1000);
-        errors.push(`yt-dlp(minimal): ${detail}`);
+        errors.push(`yt-dlp+android: ${detail}`);
+      }
+    }
+
+    // Tentativa 7: yt-dlp sem flags de client (deixa yt-dlp escolher automaticamente)
+    if (!downloaded) {
+      const resolvedCookies = ensureCookiesFile();
+      const cookiesFlag = resolvedCookies ? `--cookies "${resolvedCookies}"` : "";
+      try {
+        execSync(
+          `yt-dlp ${cookiesFlag} -f "best[ext=mp4]/best" --no-playlist --no-check-certificates -o "${videoPath}" "https://www.youtube.com/watch?v=${videoId}"`,
+          { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 300000 }
+        );
+        if (fs.existsSync(videoPath)) downloaded = true;
+      } catch (e) {
+        const err = e as { stderr?: string | Buffer; stdout?: string | Buffer; message?: string };
+        const detail = (err?.stderr?.toString?.() || err?.message || String(e)).slice(0, 1000);
+        errors.push(`yt-dlp+auto: ${detail}`);
       }
     }
 
