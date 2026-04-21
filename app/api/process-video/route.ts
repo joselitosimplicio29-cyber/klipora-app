@@ -245,22 +245,22 @@ export async function POST(req: NextRequest) {
       const proxyFlag = proxyUrl ? `--proxy "${proxyUrl}"` : "";
       const resolvedCookies = ensureCookiesFile();
       const cookiesFlag = resolvedCookies ? `--cookies "${resolvedCookies}"` : "";
-      const baseFlags = `--extractor-args "youtube:player_client=tv_embedded,web" -f "best[ext=mp4]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best" --merge-output-format mp4 --no-playlist --no-check-certificates`;
+      const baseFlags = `--impersonate chrome --extractor-args "youtube:player_client=tv_embedded,web" -f "best[ext=mp4]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best" --merge-output-format mp4 --no-playlist --no-check-certificates`;
       try {
         execSync(`yt-dlp ${proxyFlag} ${cookiesFlag} ${baseFlags} -o "${videoPath}" "https://www.youtube.com/watch?v=${videoId}"`, { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 300000 });
         if (fs.existsSync(videoPath)) downloaded = true;
-      } catch (e) { errors.push(`yt-dlp+proxy: ${String(e).slice(0, 150)}`); }
+      } catch (e) { errors.push(`yt-dlp+proxy: ${String(e).slice(0, 300)}`); }
     }
 
-    // Tentativa 5: yt-dlp sem proxy (último recurso)
+    // Tentativa 5: yt-dlp sem proxy com impersonation (último recurso)
     if (!downloaded) {
       const resolvedCookies = ensureCookiesFile();
       const cookiesFlag = resolvedCookies ? `--cookies "${resolvedCookies}"` : "";
-      const baseFlags = `--extractor-args "youtube:player_client=tv_embedded,web" -f "best[ext=mp4]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best" --merge-output-format mp4 --no-playlist --no-check-certificates`;
+      const baseFlags = `--impersonate chrome --extractor-args "youtube:player_client=tv_embedded,web" -f "best[ext=mp4]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best" --merge-output-format mp4 --no-playlist --no-check-certificates`;
       try {
         execSync(`yt-dlp ${cookiesFlag} ${baseFlags} -o "${videoPath}" "https://www.youtube.com/watch?v=${videoId}"`, { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 300000 });
         if (fs.existsSync(videoPath)) downloaded = true;
-      } catch (e) { errors.push(`yt-dlp(sem proxy): ${String(e).slice(0, 150)}`); }
+      } catch (e) { errors.push(`yt-dlp(sem proxy): ${String(e).slice(0, 300)}`); }
     }
 
     if (!downloaded) {

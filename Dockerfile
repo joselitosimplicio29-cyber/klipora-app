@@ -14,7 +14,8 @@ RUN apt-get update && apt-get install -y \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip3 install --upgrade yt-dlp
+RUN pip3 install --upgrade "yt-dlp[default]"
+RUN yt-dlp --update-to nightly 2>/dev/null || pip3 install -U "yt-dlp[default]"
 
 ENV YT_DLP_NO_UPDATE=1
 
