@@ -38,6 +38,11 @@ RUN npm run build
 RUN cp -r public .next/standalone/public \
     && cp -r .next/static .next/standalone/.next/static
 
+# Copia cookies.txt e cria pasta downloads dentro do standalone
+# (process.cwd() no servidor standalone aponta para .next/standalone)
+RUN cp cookies.txt .next/standalone/cookies.txt 2>/dev/null || true \
+    && mkdir -p .next/standalone/downloads
+
 EXPOSE 3000
 
 ENV PORT=3000

@@ -5,9 +5,22 @@ import fs from "fs";
 import { r2 } from "@/lib/r2";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 
+// No modo standalone do Next.js, process.cwd() aponta para .next/standalone
+// O arquivo cookies.txt fica em /app (raiz do container Docker)
+// Procuramos em vários locais possíveis
 const ROOT_DIR = process.cwd();
 const DOWNLOADS_DIR = path.join(ROOT_DIR, "downloads");
-const COOKIES_PATH = path.join(ROOT_DIR, "cookies.txt");
+
+// Possíveis caminhos para o cookies.txt (em ordem de preferência)
+const COOKIES_CANDIDATES = [
+  path.join(ROOT_DIR, "cookies.txt"),          // /app/.next/standalone/cookies.txt
+  path.join(ROOT_DIR, "../../..", "cookies.txt"), // sobe 3 níveis do standalone
+  "/app/cookies.txt",                            // caminho absoluto no Docker
+  "/tmp/cookies.txt",                             // fallback gravável
+];
+
+const COOKIES_PATH = COOKIES_CANDIDATES.find(p => fs.existsSync(p)) ?? "/tmp/cookies.txt";
+
 const FFPROBE = `ffprobe`;
 const FFMPEG = `ffmpeg`;
 
@@ -15,15 +28,34 @@ export const maxDuration = 300;
 
 /** Reconstrói o cookies.txt a partir da variável de ambiente YOUTUBE_COOKIES_B64 (base64). */
 function ensureCookiesFile(): string | null {
-  if (fs.existsSync(COOKIES_PATH)) return COOKIES_PATH;
+  // Verifica se já existe em algum dos caminhos candidatos
+  for (const candidate of COOKIES_CANDIDATES) {
+    if (fs.existsSync(candidate)) {
+      console.log(`[cookies] Encontrado em: ${candidate}`);
+      return candidate;
+    }
+  }
+
+  // Tenta reconstruir a partir da env var (base64)
   const b64 = process.env.YOUTUBE_COOKIES_B64;
-  if (!b64) return null;
-  try {
-    fs.writeFileSync(COOKIES_PATH, Buffer.from(b64, "base64"));
-    return COOKIES_PATH;
-  } catch {
+  if (!b64) {
+    console.warn(`[cookies] Nenhum cookies.txt encontrado. Candidatos testados: ${COOKIES_CANDIDATES.join(", ")}`);
     return null;
   }
+
+  // Tenta gravar nos candidatos em ordem, usando /tmp como último recurso
+  const targets = [...COOKIES_CANDIDATES, "/tmp/yt_cookies.txt"];
+  for (const target of targets) {
+    try {
+      fs.writeFileSync(target, Buffer.from(b64, "base64"));
+      console.log(`[cookies] Gravado a partir de YOUTUBE_COOKIES_B64 em: ${target}`);
+      return target;
+    } catch {
+      // tenta o próximo
+    }
+  }
+  console.error("[cookies] Falha ao gravar cookies.txt em todos os caminhos");
+  return null;
 }
 
 
