@@ -159,36 +159,89 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "ID do vídeo não encontrado. Cole um link válido do YouTube." }, { status: 400 });
     }
 
-    // Baixa o vídeo diretamente com yt-dlp (mais confiável que ffmpeg + RapidAPI)
+    // Baixa o vídeo via cobalt.tools (primário) ou yt-dlp com cookies (fallback)
+    let downloaded = false;
+
+    // Tentativa 1: cobalt.tools — API open-source que não é bloqueada por IP de datacenter
     try {
-      const ytUrl = `https://www.youtube.com/watch?v=${videoId}`;
+      const cobaltRes = await fetch("https://api.cobalt.tools/", {
+        method: "POST",
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          url: `https://www.youtube.com/watch?v=${videoId}`,
+          videoQuality: "1080",
+          downloadMode: "auto",
+        }),
+        signal: AbortSignal.timeout(20000),
+      });
 
-      // Monta flag de cookies: prioriza variável de ambiente, depois arquivo local
-      let cookiesFlag = "";
-      const cookiesEnv = process.env.YOUTUBE_COOKIES;
-      const cookiesFilePath = path.join(ROOT_DIR, "cookies.txt");
+      if (cobaltRes.ok) {
+        const cobaltData = await cobaltRes.json() as {
+          status: string;
+          url?: string;
+          urls?: string[];
+          audio?: string;
+          picker?: Array<{ url: string; type: string }>;
+        };
 
-      if (cookiesEnv) {
-        // Escreve cookies da env var em arquivo temporário
-        const tmpCookies = path.join(DOWNLOADS_DIR, `cookies_${timestamp}.txt`);
-        fs.writeFileSync(tmpCookies, cookiesEnv, "utf-8");
-        cookiesFlag = `--cookies "${tmpCookies}"`;
-      } else if (fs.existsSync(cookiesFilePath)) {
-        cookiesFlag = `--cookies "${cookiesFilePath}"`;
+        let dlUrl = cobaltData.url ?? cobaltData.audio;
+
+        // picker = vídeo e áudio separados → baixa só o vídeo
+        if (!dlUrl && cobaltData.picker?.length) {
+          const videoItem = cobaltData.picker.find(p => p.type === "video") ?? cobaltData.picker[0];
+          dlUrl = videoItem?.url;
+        }
+
+        if (dlUrl) {
+          const ffmpegDl = `${FFMPEG} -y -user_agent "Mozilla/5.0" -i "${dlUrl}" -c copy "${videoPath}"`;
+          execSync(ffmpegDl, { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 180000 });
+          if (fs.existsSync(videoPath)) downloaded = true;
+        }
       }
+    } catch {
+      // cobalt falhou — tenta yt-dlp com cookies
+    }
 
-      const ytDlpCmd = `yt-dlp ${cookiesFlag} --extractor-args "youtube:player_client=mweb,ios" -f "best[ext=mp4]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best" --merge-output-format mp4 --no-playlist -o "${videoPath}" "${ytUrl}"`;
-      execSync(ytDlpCmd, { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 300000 });
+    // Tentativa 2: yt-dlp com cookies (fallback)
+    if (!downloaded) {
+      try {
+        const ytUrl = `https://www.youtube.com/watch?v=${videoId}`;
+        let cookiesFlag = "";
+        const cookiesEnv = process.env.YOUTUBE_COOKIES;
+        const cookiesFilePath = path.join(ROOT_DIR, "cookies.txt");
 
-      // Remove cookies temporários após uso
-      if (cookiesEnv) {
-        const tmpCookies = path.join(DOWNLOADS_DIR, `cookies_${timestamp}.txt`);
-        try { fs.unlinkSync(tmpCookies); } catch { }
+        if (cookiesEnv) {
+          const tmpCookies = path.join(DOWNLOADS_DIR, `cookies_${timestamp}.txt`);
+          const content = cookiesEnv.replace(/\\n/g, "\n").replace(/\\t/g, "\t");
+          fs.writeFileSync(tmpCookies, content, "utf-8");
+          cookiesFlag = `--cookies "${tmpCookies}"`;
+        } else if (fs.existsSync(cookiesFilePath)) {
+          cookiesFlag = `--cookies "${cookiesFilePath}"`;
+        }
+
+        const ytDlpCmd = `yt-dlp ${cookiesFlag} --extractor-args "youtube:player_client=mweb,ios" -f "best[ext=mp4]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best" --merge-output-format mp4 --no-playlist -o "${videoPath}" "${ytUrl}"`;
+        execSync(ytDlpCmd, { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 300000 });
+
+        if (cookiesEnv) {
+          try { fs.unlinkSync(path.join(DOWNLOADS_DIR, `cookies_${timestamp}.txt`)); } catch { }
+        }
+
+        if (fs.existsSync(videoPath)) downloaded = true;
+      } catch (err: unknown) {
+        const e = err as { message?: string; stderr?: string | Buffer };
+        const detail = e?.stderr?.toString?.() || e?.message || String(err);
+        return NextResponse.json({
+          error: "Não foi possível baixar o vídeo do YouTube",
+          detail: "cobalt.tools e yt-dlp falharam. " + detail.slice(0, 400),
+        }, { status: 500 });
       }
-    } catch (err: unknown) {
-      const e = err as { message?: string; stderr?: string | Buffer };
-      const detail = e?.stderr?.toString?.() || e?.message || String(err);
-      return NextResponse.json({ error: "Erro ao baixar vídeo do YouTube", detail: detail.slice(0, 500) }, { status: 500 });
+    }
+
+    if (!downloaded) {
+      return NextResponse.json({ error: "Download falhou em todas as tentativas" }, { status: 500 });
     }
 
   } else {
