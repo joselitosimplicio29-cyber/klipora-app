@@ -277,22 +277,54 @@ export async function POST(req: NextRequest) {
       const proxyFlag = proxyUrl ? `--proxy "${proxyUrl}"` : "";
       const resolvedCookies = ensureCookiesFile();
       const cookiesFlag = resolvedCookies ? `--cookies "${resolvedCookies}"` : "";
-      const baseFlags = `--impersonate chrome --extractor-args "youtube:player_client=tv_embedded,web" -f "best[ext=mp4]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best" --merge-output-format mp4 --no-playlist --no-check-certificates`;
+      // Usa formato simples para máxima compatibilidade (sem --merge-output-format)
+      const baseFlags = `--extractor-args "youtube:player_client=tv_embedded,web" -f "best[ext=mp4]/best" --no-playlist --no-check-certificates --socket-timeout 30`;
       try {
-        execSync(`yt-dlp ${proxyFlag} ${cookiesFlag} ${baseFlags} -o "${videoPath}" "https://www.youtube.com/watch?v=${videoId}"`, { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 300000 });
+        execSync(
+          `yt-dlp ${proxyFlag} ${cookiesFlag} ${baseFlags} -o "${videoPath}" "https://www.youtube.com/watch?v=${videoId}"`,
+          { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 300000 }
+        );
         if (fs.existsSync(videoPath)) downloaded = true;
-      } catch (e) { errors.push(`yt-dlp+proxy: ${String(e).slice(0, 300)}`); }
+      } catch (e) {
+        const err = e as { stderr?: string | Buffer; stdout?: string | Buffer; message?: string };
+        const detail = (err?.stderr?.toString?.() || err?.message || String(e)).slice(0, 1000);
+        errors.push(`yt-dlp+proxy: ${detail}`);
+      }
     }
 
-    // Tentativa 5: yt-dlp sem proxy com impersonation (último recurso)
+    // Tentativa 5: yt-dlp sem proxy
     if (!downloaded) {
       const resolvedCookies = ensureCookiesFile();
       const cookiesFlag = resolvedCookies ? `--cookies "${resolvedCookies}"` : "";
-      const baseFlags = `--impersonate chrome --extractor-args "youtube:player_client=tv_embedded,web" -f "best[ext=mp4]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best" --merge-output-format mp4 --no-playlist --no-check-certificates`;
+      const baseFlags = `--extractor-args "youtube:player_client=tv_embedded,web" -f "best[ext=mp4]/best" --no-playlist --no-check-certificates --socket-timeout 30`;
       try {
-        execSync(`yt-dlp ${cookiesFlag} ${baseFlags} -o "${videoPath}" "https://www.youtube.com/watch?v=${videoId}"`, { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 300000 });
+        execSync(
+          `yt-dlp ${cookiesFlag} ${baseFlags} -o "${videoPath}" "https://www.youtube.com/watch?v=${videoId}"`,
+          { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 300000 }
+        );
         if (fs.existsSync(videoPath)) downloaded = true;
-      } catch (e) { errors.push(`yt-dlp(sem proxy): ${String(e).slice(0, 300)}`); }
+      } catch (e) {
+        const err = e as { stderr?: string | Buffer; stdout?: string | Buffer; message?: string };
+        const detail = (err?.stderr?.toString?.() || err?.message || String(e)).slice(0, 1000);
+        errors.push(`yt-dlp(sem proxy): ${detail}`);
+      }
+    }
+
+    // Tentativa 6: yt-dlp mínimo (player_client=web) como último recurso
+    if (!downloaded) {
+      const resolvedCookies = ensureCookiesFile();
+      const cookiesFlag = resolvedCookies ? `--cookies "${resolvedCookies}"` : "";
+      try {
+        execSync(
+          `yt-dlp ${cookiesFlag} --extractor-args "youtube:player_client=web" -f best --no-playlist --no-check-certificates -o "${videoPath}" "https://www.youtube.com/watch?v=${videoId}"`,
+          { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 300000 }
+        );
+        if (fs.existsSync(videoPath)) downloaded = true;
+      } catch (e) {
+        const err = e as { stderr?: string | Buffer; stdout?: string | Buffer; message?: string };
+        const detail = (err?.stderr?.toString?.() || err?.message || String(e)).slice(0, 1000);
+        errors.push(`yt-dlp(minimal): ${detail}`);
+      }
     }
 
     if (!downloaded) {
