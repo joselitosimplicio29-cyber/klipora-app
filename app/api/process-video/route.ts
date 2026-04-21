@@ -173,6 +173,7 @@ export async function POST(req: NextRequest) {
     sizeKB: number;
     index: number;
   }[] = [];
+  const clipErrors: string[] = [];
 
   const totalClips = Math.floor(totalSeconds / clipDuration);
   const videoFilter = format === "9:16" ? `-vf "crop=ih*9/16:ih:(iw-ih*9/16)/2:0"` : "";
@@ -202,16 +203,28 @@ export async function POST(req: NextRequest) {
         });
 
         try { fs.unlinkSync(clipPath); } catch { }
+      } else {
+        clipErrors.push(`Clip ${i + 1}: FFmpeg não gerou o arquivo`);
       }
-    } catch (err) {
-      console.error(`Erro no clip ${i + 1}:`, err);
+    } catch (err: unknown) {
+      const e = err as { message?: string; stderr?: string | Buffer };
+      const detail = e?.stderr?.toString?.() || e?.message || String(err);
+      clipErrors.push(`Clip ${i + 1}: ${detail.slice(0, 300)}`);
+      console.error(`Erro no clip ${i + 1}:`, detail);
     }
   }
 
   try { fs.unlinkSync(videoPath); } catch { }
 
   if (clips.length === 0) {
-    return NextResponse.json({ error: "Nenhum clip gerado" }, { status: 500 });
+    return NextResponse.json({
+      error: "Nenhum clip gerado",
+      detail: clipErrors.join("\n"),
+      clipErrors,
+      totalSeconds,
+      clipDuration,
+      downloadsDir: DOWNLOADS_DIR,
+    }, { status: 500 });
   }
 
   return NextResponse.json({
