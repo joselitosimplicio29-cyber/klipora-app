@@ -81,64 +81,24 @@ export async function POST(req: NextRequest) {
     clipDuration = ALLOWED.includes(dur) ? dur : 30;
     format = body?.format ?? "original";
 
-    const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
-    if (!RAPIDAPI_KEY) {
-      return NextResponse.json({ error: "RAPIDAPI_KEY não configurada" }, { status: 500 });
+    // Verifica se é uma URL do YouTube válida
+    const ytMatch = videoUrl.match(/(?:youtube\.com|youtu\.be)/);
+    if (!ytMatch) {
+      return NextResponse.json({ error: "Apenas URLs do YouTube são suportadas" }, { status: 400 });
     }
 
-    const ytMatch = videoUrl.match(/(?:v=|youtu\.be\/|shorts\/)([a-zA-Z0-9_-]{11})/);
-    const videoId = ytMatch?.[1];
-    if (!videoId) {
-      return NextResponse.json({ error: "ID do vídeo não encontrado na URL" }, { status: 400 });
-    }
-
-    let downloadUrl = "";
+    // Usa yt-dlp para baixar o vídeo diretamente (já instalado no Docker)
     try {
-      const apiRes = await fetch(
-        `https://ytstream-download-youtube-videos.p.rapidapi.com/dl?id=${videoId}`,
-        {
-          method: "GET",
-          headers: {
-            "x-rapidapi-host": "ytstream-download-youtube-videos.p.rapidapi.com",
-            "x-rapidapi-key": RAPIDAPI_KEY,
-          },
-        }
-      );
-
-      if (!apiRes.ok) {
-        const errText = await apiRes.text();
-        return NextResponse.json({ error: "Falha na API YTStream", detail: errText }, { status: 500 });
-      }
-
-      const apiData = await apiRes.json();
-      const formats = apiData?.formats || apiData?.adaptiveFormats || [];
-      const mp4WithAudio = formats.find((f: { mimeType?: string; url?: string; audioQuality?: string }) =>
-        f.mimeType?.includes("video/mp4") && f.url && f.audioQuality
-      );
-      const mp4Any = formats.find((f: { mimeType?: string; url?: string }) =>
-        f.mimeType?.includes("video/mp4") && f.url
-      );
-
-      if (mp4WithAudio?.url) downloadUrl = mp4WithAudio.url;
-      else if (mp4Any?.url) downloadUrl = mp4Any.url;
-      else if (apiData?.url) downloadUrl = apiData.url;
-      else return NextResponse.json({ error: "Nenhum formato MP4 encontrado" }, { status: 500 });
-
+      const ytDlpCmd = `yt-dlp -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" --merge-output-format mp4 -o "${videoPath}" "${videoUrl}"`;
+      execSync(ytDlpCmd, { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 180000 });
     } catch (err: unknown) {
-      const e = err as { message?: string };
-      return NextResponse.json({ error: "Erro ao chamar YTStream API", detail: e?.message }, { status: 500 });
+      const e = err as { message?: string; stderr?: string | Buffer };
+      const detail = e?.stderr?.toString?.() || e?.message || String(err);
+      return NextResponse.json({ error: "Falha ao baixar vídeo com yt-dlp", detail: detail.slice(0, 500) }, { status: 500 });
     }
 
-    try {
-      const videoRes = await fetch(downloadUrl);
-      if (!videoRes.ok) {
-        return NextResponse.json({ error: "Falha ao baixar vídeo", detail: `Status ${videoRes.status}` }, { status: 500 });
-      }
-      const buffer = Buffer.from(await videoRes.arrayBuffer());
-      fs.writeFileSync(videoPath, buffer);
-    } catch (err: unknown) {
-      const e = err as { message?: string };
-      return NextResponse.json({ error: "Erro ao salvar vídeo", detail: e?.message }, { status: 500 });
+    if (!fs.existsSync(videoPath)) {
+      return NextResponse.json({ error: "yt-dlp não gerou o arquivo de vídeo" }, { status: 500 });
     }
 
   } else {
