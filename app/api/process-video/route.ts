@@ -23,6 +23,40 @@ async function uploadToR2(filePath: string, key: string): Promise<string> {
   return `${process.env.R2_PUBLIC_URL}/${key}`;
 }
 
+async function generateSubtitle(clipPath: string): Promise<string> {
+  const GROQ_API_KEY = process.env.GROQ_API_KEY;
+  if (!GROQ_API_KEY) return "";
+
+  const audioPath = clipPath.replace(".mp4", "_audio.mp3");
+  try {
+    execSync(
+      `${FFMPEG} -y -i "${clipPath}" -vn -ar 16000 -ac 1 -b:a 64k "${audioPath}"`,
+      { stdio: ["pipe", "pipe", "pipe"], timeout: 60000 }
+    );
+
+    const audioBuffer = fs.readFileSync(audioPath);
+    const groqForm = new FormData();
+    groqForm.append("file", new Blob([audioBuffer], { type: "audio/mpeg" }), "audio.mp3");
+    groqForm.append("model", "whisper-large-v3-turbo");
+    groqForm.append("response_format", "text");
+
+    const groqRes = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${GROQ_API_KEY}` },
+      body: groqForm,
+    });
+
+    if (groqRes.ok) {
+      return (await groqRes.text()).trim();
+    }
+  } catch {
+    // Legendas são opcionais — não interrompe o fluxo
+  } finally {
+    try { fs.unlinkSync(audioPath); } catch { }
+  }
+  return "";
+}
+
 export async function POST(req: NextRequest) {
   if (!fs.existsSync(DOWNLOADS_DIR)) {
     fs.mkdirSync(DOWNLOADS_DIR, { recursive: true });
@@ -131,6 +165,7 @@ export async function POST(req: NextRequest) {
     end: number;
     sizeKB: number;
     index: number;
+    subtitle: string;
   }[] = [];
   const clipErrors: string[] = [];
 
@@ -150,6 +185,10 @@ export async function POST(req: NextRequest) {
       if (fs.existsSync(clipPath)) {
         const sizeKB = Math.round(fs.statSync(clipPath).size / 1024);
         const r2Key = `clips/${clipFilename}`;
+
+        // Gera legenda automática via Groq Whisper (opcional)
+        const subtitle = await generateSubtitle(clipPath);
+
         const publicUrl = await uploadToR2(clipPath, r2Key);
 
         clips.push({
@@ -159,6 +198,7 @@ export async function POST(req: NextRequest) {
           start,
           end: start + clipDuration,
           sizeKB,
+          subtitle,
         });
 
         try { fs.unlinkSync(clipPath); } catch { }

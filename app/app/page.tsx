@@ -9,6 +9,7 @@ interface Clip {
   start: number;
   end: number;
   sizeKB: number;
+  subtitle?: string;
 }
 
 interface ApiResponse {
@@ -540,9 +541,6 @@ export default function AppPage() {
                     value={youtubeUrl}
                     onChange={(e) => setYoutubeUrl(e.target.value)}
                   />
-                  <p className="hint" style={{ marginTop: 8 }}>
-                    O link do YouTube ainda pode falhar por bloqueio 403 do provedor.
-                  </p>
                 </>
               )}
 
@@ -641,6 +639,22 @@ export default function AppPage() {
                         Baixar
                       </a>
                     </div>
+
+                    {activeClip.subtitle && (
+                      <div style={{
+                        padding: "12px 14px",
+                        borderTop: "1px solid rgba(255,255,255,0.06)",
+                        fontSize: 13,
+                        color: "rgba(255,255,255,0.7)",
+                        lineHeight: 1.6,
+                        background: "rgba(124,58,237,0.06)",
+                      }}>
+                        <div style={{ color: "#c4a0ff", fontWeight: 700, marginBottom: 6, fontSize: 11, textTransform: "uppercase", letterSpacing: 1 }}>
+                          🎤 Legenda automática
+                        </div>
+                        {activeClip.subtitle}
+                      </div>
+                    )}
                   </div>
 
                   <div className="clip-list">
