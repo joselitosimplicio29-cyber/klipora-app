@@ -214,36 +214,62 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Tentativa 2: yt-dlp com proxy residencial (PROXY_URL) ou cookies
+    // Tentativa 2: Invidious proxy (open-source YouTube frontend que roteia streams pelos próprios servidores)
+    if (!downloaded) {
+      const invidiousInstances = [
+        "https://inv.tux.pizza",
+        "https://invidious.nerdvpn.de",
+        "https://vid.puffyan.us",
+        "https://invidious.einfachzocken.eu",
+      ];
+
+      for (const instance of invidiousInstances) {
+        if (downloaded) break;
+        try {
+          const apiRes = await fetch(`${instance}/api/v1/videos/${videoId}?fields=formatStreams`, {
+            headers: { "User-Agent": "Mozilla/5.0" },
+            signal: AbortSignal.timeout(10000),
+          });
+          if (!apiRes.ok) continue;
+
+          const videoData = await apiRes.json() as {
+            formatStreams?: Array<{ itag: string; container: string; resolution?: string }>;
+          };
+          const streams = videoData.formatStreams ?? [];
+          const mp4Stream = streams.find(s => s.container === "mp4") ?? streams[0];
+
+          if (mp4Stream?.itag) {
+            const proxyDlUrl = `${instance}/latest_version?id=${videoId}&itag=${mp4Stream.itag}&local=true`;
+            execSync(
+              `${FFMPEG} -y -user_agent "Mozilla/5.0" -i "${proxyDlUrl}" -c copy "${videoPath}"`,
+              { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 180000 }
+            );
+            if (fs.existsSync(videoPath)) downloaded = true;
+          }
+        } catch {
+          // tenta próxima instância Invidious
+        }
+      }
+    }
+
+    // Tentativa 3: yt-dlp com proxy residencial (PROXY_URL)
     if (!downloaded) {
       try {
-        const ytUrl = `https://www.youtube.com/watch?v=${videoId}`;
-
-        // Proxy residencial (bypassa bloqueio de IP de datacenter)
-        // Tenta HTTP primeiro, depois SOCKS5 se falhar
         const proxyUrl = process.env.PROXY_URL;
+        const proxyFlag = proxyUrl ? `--proxy "${proxyUrl}"` : "";
 
-        const baseFlags = `--extractor-args "youtube:player_client=mweb,ios" -f "best[ext=mp4]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best" --merge-output-format mp4 --no-playlist --source-address 0.0.0.0`;
+        const baseFlags = `--extractor-args "youtube:player_client=mweb,ios" -f "best[ext=mp4]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best" --merge-output-format mp4 --no-playlist`;
 
-        const proxyVariants: string[] = [];
-        if (proxyUrl) {
-          proxyVariants.push(`--proxy "${proxyUrl}"`);
-          // Tenta SOCKS5 se a URL for HTTP
-          if (proxyUrl.startsWith("http://")) {
-            const socks5Url = proxyUrl.replace("http://", "socks5h://");
-            proxyVariants.push(`--proxy "${socks5Url}"`);
-          }
-        }
-        proxyVariants.push(""); // sem proxy como último recurso
-
-        for (const proxyFlag of proxyVariants) {
-          if (downloaded) break;
-          try {
-            const ytDlpCmd = `yt-dlp ${proxyFlag} ${baseFlags} -o "${videoPath}" "${ytUrl}"`;
+        try {
+          const ytDlpCmd = `yt-dlp ${proxyFlag} ${baseFlags} -o "${videoPath}" "https://www.youtube.com/watch?v=${videoId}"`;
+          execSync(ytDlpCmd, { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 300000 });
+          if (fs.existsSync(videoPath)) downloaded = true;
+        } catch {
+          // proxy falhou — tenta sem proxy como último recurso
+          if (!downloaded && proxyUrl) {
+            const ytDlpCmd = `yt-dlp ${baseFlags} -o "${videoPath}" "https://www.youtube.com/watch?v=${videoId}"`;
             execSync(ytDlpCmd, { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 300000 });
             if (fs.existsSync(videoPath)) downloaded = true;
-          } catch {
-            // tenta próxima variante
           }
         }
       } catch (err: unknown) {
@@ -251,13 +277,13 @@ export async function POST(req: NextRequest) {
         const detail = e?.stderr?.toString?.() || e?.message || String(err);
         return NextResponse.json({
           error: "Não foi possível baixar o vídeo do YouTube",
-          detail: "Todas as tentativas falharam. Configure PROXY_URL no Railway com um proxy residencial (webshare.io). " + detail.slice(0, 300),
+          detail: "Todas as tentativas falharam (cobalt, invidious, yt-dlp). " + detail.slice(0, 300),
         }, { status: 500 });
       }
     }
 
     if (!downloaded) {
-      return NextResponse.json({ error: "Download falhou. Configure PROXY_URL no Railway com um proxy residencial." }, { status: 500 });
+      return NextResponse.json({ error: "Download falhou em todas as tentativas (cobalt + invidious + yt-dlp)." }, { status: 500 });
     }
 
   } else {
