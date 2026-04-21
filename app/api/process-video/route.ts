@@ -81,24 +81,75 @@ export async function POST(req: NextRequest) {
     clipDuration = ALLOWED.includes(dur) ? dur : 30;
     format = body?.format ?? "original";
 
-    // Verifica se é uma URL do YouTube válida
-    const ytMatch = videoUrl.match(/(?:youtube\.com|youtu\.be)/);
-    if (!ytMatch) {
-      return NextResponse.json({ error: "Apenas URLs do YouTube são suportadas" }, { status: 400 });
+    // Extrai o ID do vídeo do YouTube (suporta /watch?v=, youtu.be/, /shorts/)
+    const ytMatch = videoUrl.match(/(?:v=|youtu\.be\/|shorts\/)([a-zA-Z0-9_-]{11})/);
+    const videoId = ytMatch?.[1];
+    if (!videoId) {
+      return NextResponse.json({ error: "ID do vídeo não encontrado. Cole um link válido do YouTube." }, { status: 400 });
     }
 
-    // Usa yt-dlp para baixar o vídeo diretamente (já instalado no Docker)
+    // Chave da RapidAPI (configurar no Railway: RAPIDAPI_KEY)
+    const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
+    if (!RAPIDAPI_KEY) {
+      return NextResponse.json({ error: "RAPIDAPI_KEY não configurada no servidor" }, { status: 500 });
+    }
+
+    // Usa a RapidAPI YTStream para obter a URL de download
+    let downloadUrl = "";
     try {
-      const ytDlpCmd = `yt-dlp -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" --merge-output-format mp4 -o "${videoPath}" "${videoUrl}"`;
-      execSync(ytDlpCmd, { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 180000 });
+      const apiRes = await fetch(
+        `https://ytstream-download-youtube-videos.p.rapidapi.com/dl?id=${videoId}`,
+        {
+          method: "GET",
+          headers: {
+            "x-rapidapi-host": "ytstream-download-youtube-videos.p.rapidapi.com",
+            "x-rapidapi-key": RAPIDAPI_KEY,
+          },
+        }
+      );
+
+      if (!apiRes.ok) {
+        const errText = await apiRes.text();
+        return NextResponse.json({ error: "Falha na API YTStream", detail: errText.slice(0, 300) }, { status: 500 });
+      }
+
+      const apiData = await apiRes.json();
+
+      // Tenta encontrar o melhor formato MP4 com áudio
+      const allFormats = [...(apiData?.formats || []), ...(apiData?.adaptiveFormats || [])];
+      const mp4WithAudio = allFormats.find((f: { mimeType?: string; url?: string; audioQuality?: string }) =>
+        f.mimeType?.includes("video/mp4") && f.url && f.audioQuality
+      );
+      const mp4Any = allFormats.find((f: { mimeType?: string; url?: string }) =>
+        f.mimeType?.includes("video/mp4") && f.url
+      );
+
+      if (mp4WithAudio?.url) downloadUrl = mp4WithAudio.url;
+      else if (mp4Any?.url) downloadUrl = mp4Any.url;
+      else if (apiData?.url) downloadUrl = apiData.url;
+      else {
+        return NextResponse.json({
+          error: "Nenhum formato MP4 encontrado na resposta da API",
+          formatsDisponíveis: allFormats.map((f: { mimeType?: string }) => f.mimeType).slice(0, 10),
+        }, { status: 500 });
+      }
+
     } catch (err: unknown) {
-      const e = err as { message?: string; stderr?: string | Buffer };
-      const detail = e?.stderr?.toString?.() || e?.message || String(err);
-      return NextResponse.json({ error: "Falha ao baixar vídeo com yt-dlp", detail: detail.slice(0, 500) }, { status: 500 });
+      const e = err as { message?: string };
+      return NextResponse.json({ error: "Erro ao chamar YTStream API", detail: e?.message }, { status: 500 });
     }
 
-    if (!fs.existsSync(videoPath)) {
-      return NextResponse.json({ error: "yt-dlp não gerou o arquivo de vídeo" }, { status: 500 });
+    // Baixa o vídeo via URL obtida da API
+    try {
+      const videoRes = await fetch(downloadUrl, { signal: AbortSignal.timeout(120000) });
+      if (!videoRes.ok) {
+        return NextResponse.json({ error: "Falha ao baixar vídeo da URL da API", detail: `Status ${videoRes.status}` }, { status: 500 });
+      }
+      const buffer = Buffer.from(await videoRes.arrayBuffer());
+      fs.writeFileSync(videoPath, buffer);
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      return NextResponse.json({ error: "Erro ao salvar vídeo", detail: e?.message }, { status: 500 });
     }
 
   } else {
