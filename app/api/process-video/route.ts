@@ -219,29 +219,34 @@ export async function POST(req: NextRequest) {
       try {
         const ytUrl = `https://www.youtube.com/watch?v=${videoId}`;
 
-        // Proxy residencial (bypasssa bloqueio de IP de datacenter)
+        // Proxy residencial (bypassa bloqueio de IP de datacenter)
+        // Tenta HTTP primeiro, depois SOCKS5 se falhar
         const proxyUrl = process.env.PROXY_URL;
-        const proxyFlag = proxyUrl ? `--proxy "${proxyUrl}"` : "";
+        const ytUrl = `https://www.youtube.com/watch?v=${videoId}`;
 
-        // Cookies como alternativa ao proxy
-        let cookiesFlag = "";
-        if (!proxyUrl) {
-          const cookiesEnv = process.env.YOUTUBE_COOKIES;
-          const cookiesFilePath = path.join(ROOT_DIR, "cookies.txt");
-          if (cookiesEnv) {
-            const tmpCookies = path.join(DOWNLOADS_DIR, `cookies_${timestamp}.txt`);
-            const content = cookiesEnv.replace(/\\n/g, "\n").replace(/\\t/g, "\t");
-            fs.writeFileSync(tmpCookies, content, "utf-8");
-            cookiesFlag = `--cookies "${tmpCookies}"`;
-          } else if (fs.existsSync(cookiesFilePath)) {
-            cookiesFlag = `--cookies "${cookiesFilePath}"`;
+        const baseFlags = `--extractor-args "youtube:player_client=mweb,ios" -f "best[ext=mp4]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best" --merge-output-format mp4 --no-playlist --source-address 0.0.0.0`;
+
+        const proxyVariants: string[] = [];
+        if (proxyUrl) {
+          proxyVariants.push(`--proxy "${proxyUrl}"`);
+          // Tenta SOCKS5 se a URL for HTTP
+          if (proxyUrl.startsWith("http://")) {
+            const socks5Url = proxyUrl.replace("http://", "socks5h://");
+            proxyVariants.push(`--proxy "${socks5Url}"`);
           }
         }
+        proxyVariants.push(""); // sem proxy como último recurso
 
-        const ytDlpCmd = `yt-dlp ${proxyFlag} ${cookiesFlag} --extractor-args "youtube:player_client=mweb,ios" -f "best[ext=mp4]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best" --merge-output-format mp4 --no-playlist -o "${videoPath}" "${ytUrl}"`;
-        execSync(ytDlpCmd, { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 300000 });
-
-        if (fs.existsSync(videoPath)) downloaded = true;
+        for (const proxyFlag of proxyVariants) {
+          if (downloaded) break;
+          try {
+            const ytDlpCmd = `yt-dlp ${proxyFlag} ${baseFlags} -o "${videoPath}" "${ytUrl}"`;
+            execSync(ytDlpCmd, { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 300000 });
+            if (fs.existsSync(videoPath)) downloaded = true;
+          } catch {
+            // tenta próxima variante
+          }
+        }
       } catch (err: unknown) {
         const e = err as { message?: string; stderr?: string | Buffer };
         const detail = e?.stderr?.toString?.() || e?.message || String(err);
