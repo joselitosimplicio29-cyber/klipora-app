@@ -7,10 +7,25 @@ import { PutObjectCommand } from "@aws-sdk/client-s3";
 
 const ROOT_DIR = process.cwd();
 const DOWNLOADS_DIR = path.join(ROOT_DIR, "downloads");
+const COOKIES_PATH = path.join(ROOT_DIR, "cookies.txt");
 const FFPROBE = `ffprobe`;
 const FFMPEG = `ffmpeg`;
 
 export const maxDuration = 300;
+
+/** Reconstrói o cookies.txt a partir da variável de ambiente YOUTUBE_COOKIES_B64 (base64). */
+function ensureCookiesFile(): string | null {
+  if (fs.existsSync(COOKIES_PATH)) return COOKIES_PATH;
+  const b64 = process.env.YOUTUBE_COOKIES_B64;
+  if (!b64) return null;
+  try {
+    fs.writeFileSync(COOKIES_PATH, Buffer.from(b64, "base64"));
+    return COOKIES_PATH;
+  } catch {
+    return null;
+  }
+}
+
 
 async function uploadToR2(filePath: string, key: string): Promise<string> {
   const buffer = fs.readFileSync(filePath);
@@ -228,8 +243,8 @@ export async function POST(req: NextRequest) {
     if (!downloaded) {
       const proxyUrl = process.env.PROXY_URL;
       const proxyFlag = proxyUrl ? `--proxy "${proxyUrl}"` : "";
-      const cookiesPath = path.join(ROOT_DIR, "cookies.txt");
-      const cookiesFlag = fs.existsSync(cookiesPath) ? `--cookies "${cookiesPath}"` : "";
+      const resolvedCookies = ensureCookiesFile();
+      const cookiesFlag = resolvedCookies ? `--cookies "${resolvedCookies}"` : "";
       const baseFlags = `--extractor-args "youtube:player_client=tv_embedded,web" -f "best[ext=mp4]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best" --merge-output-format mp4 --no-playlist --no-check-certificates`;
       try {
         execSync(`yt-dlp ${proxyFlag} ${cookiesFlag} ${baseFlags} -o "${videoPath}" "https://www.youtube.com/watch?v=${videoId}"`, { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 300000 });
@@ -239,8 +254,8 @@ export async function POST(req: NextRequest) {
 
     // Tentativa 5: yt-dlp sem proxy (último recurso)
     if (!downloaded) {
-      const cookiesPath = path.join(ROOT_DIR, "cookies.txt");
-      const cookiesFlag = fs.existsSync(cookiesPath) ? `--cookies "${cookiesPath}"` : "";
+      const resolvedCookies = ensureCookiesFile();
+      const cookiesFlag = resolvedCookies ? `--cookies "${resolvedCookies}"` : "";
       const baseFlags = `--extractor-args "youtube:player_client=tv_embedded,web" -f "best[ext=mp4]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best" --merge-output-format mp4 --no-playlist --no-check-certificates`;
       try {
         execSync(`yt-dlp ${cookiesFlag} ${baseFlags} -o "${videoPath}" "https://www.youtube.com/watch?v=${videoId}"`, { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 300000 });
