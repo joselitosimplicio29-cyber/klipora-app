@@ -216,7 +216,7 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     success: true,
-    message: `${clips.length} clips gerados com sucesso!`,
+    message: `${clips.length} clips gerados!`,
     clips,
     totalClips: clips.length,
     clipDuration,
