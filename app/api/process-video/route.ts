@@ -159,75 +159,87 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "ID do vídeo não encontrado. Cole um link válido do YouTube." }, { status: 400 });
     }
 
-    // Baixa o vídeo via cobalt.tools (primário) ou yt-dlp com cookies (fallback)
+    // Baixa o vídeo via cobalt.tools (primário) ou yt-dlp com proxy/cookies (fallback)
     let downloaded = false;
 
-    // Tentativa 1: cobalt.tools — API open-source que não é bloqueada por IP de datacenter
-    try {
-      const cobaltRes = await fetch("https://api.cobalt.tools/", {
-        method: "POST",
-        headers: {
-          "Accept": "application/json",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          url: `https://www.youtube.com/watch?v=${videoId}`,
-          videoQuality: "1080",
-          downloadMode: "auto",
-        }),
-        signal: AbortSignal.timeout(20000),
-      });
+    // Tentativa 1: cobalt.tools — não é bloqueado por IP de datacenter
+    const cobaltInstances = [
+      "https://api.cobalt.tools/",
+      "https://cobalt.imput.net/",
+    ];
 
-      if (cobaltRes.ok) {
-        const cobaltData = await cobaltRes.json() as {
-          status: string;
-          url?: string;
-          urls?: string[];
-          audio?: string;
-          picker?: Array<{ url: string; type: string }>;
-        };
+    for (const cobaltBase of cobaltInstances) {
+      if (downloaded) break;
+      try {
+        const cobaltRes = await fetch(cobaltBase, {
+          method: "POST",
+          headers: {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "User-Agent": "Mozilla/5.0 (compatible; Klipora/1.0)",
+          },
+          body: JSON.stringify({
+            url: `https://www.youtube.com/watch?v=${videoId}`,
+            videoQuality: "1080",
+            downloadMode: "auto",
+            filenameStyle: "classic",
+          }),
+          signal: AbortSignal.timeout(25000),
+        });
 
-        let dlUrl = cobaltData.url ?? cobaltData.audio;
+        if (cobaltRes.ok) {
+          const cobaltData = await cobaltRes.json() as {
+            status: string;
+            url?: string;
+            audio?: string;
+            picker?: Array<{ url: string; type: string }>;
+          };
 
-        // picker = vídeo e áudio separados → baixa só o vídeo
-        if (!dlUrl && cobaltData.picker?.length) {
-          const videoItem = cobaltData.picker.find(p => p.type === "video") ?? cobaltData.picker[0];
-          dlUrl = videoItem?.url;
+          let dlUrl = cobaltData.url ?? cobaltData.audio;
+          if (!dlUrl && cobaltData.picker?.length) {
+            const vid = cobaltData.picker.find(p => p.type === "video") ?? cobaltData.picker[0];
+            dlUrl = vid?.url;
+          }
+
+          if (dlUrl && cobaltData.status !== "error") {
+            execSync(
+              `${FFMPEG} -y -user_agent "Mozilla/5.0" -i "${dlUrl}" -c copy "${videoPath}"`,
+              { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 180000 }
+            );
+            if (fs.existsSync(videoPath)) downloaded = true;
+          }
         }
-
-        if (dlUrl) {
-          const ffmpegDl = `${FFMPEG} -y -user_agent "Mozilla/5.0" -i "${dlUrl}" -c copy "${videoPath}"`;
-          execSync(ffmpegDl, { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 180000 });
-          if (fs.existsSync(videoPath)) downloaded = true;
-        }
+      } catch {
+        // tenta próxima instância
       }
-    } catch {
-      // cobalt falhou — tenta yt-dlp com cookies
     }
 
-    // Tentativa 2: yt-dlp com cookies (fallback)
+    // Tentativa 2: yt-dlp com proxy residencial (PROXY_URL) ou cookies
     if (!downloaded) {
       try {
         const ytUrl = `https://www.youtube.com/watch?v=${videoId}`;
+
+        // Proxy residencial (bypasssa bloqueio de IP de datacenter)
+        const proxyUrl = process.env.PROXY_URL;
+        const proxyFlag = proxyUrl ? `--proxy "${proxyUrl}"` : "";
+
+        // Cookies como alternativa ao proxy
         let cookiesFlag = "";
-        const cookiesEnv = process.env.YOUTUBE_COOKIES;
-        const cookiesFilePath = path.join(ROOT_DIR, "cookies.txt");
-
-        if (cookiesEnv) {
-          const tmpCookies = path.join(DOWNLOADS_DIR, `cookies_${timestamp}.txt`);
-          const content = cookiesEnv.replace(/\\n/g, "\n").replace(/\\t/g, "\t");
-          fs.writeFileSync(tmpCookies, content, "utf-8");
-          cookiesFlag = `--cookies "${tmpCookies}"`;
-        } else if (fs.existsSync(cookiesFilePath)) {
-          cookiesFlag = `--cookies "${cookiesFilePath}"`;
+        if (!proxyUrl) {
+          const cookiesEnv = process.env.YOUTUBE_COOKIES;
+          const cookiesFilePath = path.join(ROOT_DIR, "cookies.txt");
+          if (cookiesEnv) {
+            const tmpCookies = path.join(DOWNLOADS_DIR, `cookies_${timestamp}.txt`);
+            const content = cookiesEnv.replace(/\\n/g, "\n").replace(/\\t/g, "\t");
+            fs.writeFileSync(tmpCookies, content, "utf-8");
+            cookiesFlag = `--cookies "${tmpCookies}"`;
+          } else if (fs.existsSync(cookiesFilePath)) {
+            cookiesFlag = `--cookies "${cookiesFilePath}"`;
+          }
         }
 
-        const ytDlpCmd = `yt-dlp ${cookiesFlag} --extractor-args "youtube:player_client=mweb,ios" -f "best[ext=mp4]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best" --merge-output-format mp4 --no-playlist -o "${videoPath}" "${ytUrl}"`;
+        const ytDlpCmd = `yt-dlp ${proxyFlag} ${cookiesFlag} --extractor-args "youtube:player_client=mweb,ios" -f "best[ext=mp4]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best" --merge-output-format mp4 --no-playlist -o "${videoPath}" "${ytUrl}"`;
         execSync(ytDlpCmd, { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 300000 });
-
-        if (cookiesEnv) {
-          try { fs.unlinkSync(path.join(DOWNLOADS_DIR, `cookies_${timestamp}.txt`)); } catch { }
-        }
 
         if (fs.existsSync(videoPath)) downloaded = true;
       } catch (err: unknown) {
@@ -235,13 +247,13 @@ export async function POST(req: NextRequest) {
         const detail = e?.stderr?.toString?.() || e?.message || String(err);
         return NextResponse.json({
           error: "Não foi possível baixar o vídeo do YouTube",
-          detail: "cobalt.tools e yt-dlp falharam. " + detail.slice(0, 400),
+          detail: "Todas as tentativas falharam. Configure PROXY_URL no Railway com um proxy residencial (webshare.io). " + detail.slice(0, 300),
         }, { status: 500 });
       }
     }
 
     if (!downloaded) {
-      return NextResponse.json({ error: "Download falhou em todas as tentativas" }, { status: 500 });
+      return NextResponse.json({ error: "Download falhou. Configure PROXY_URL no Railway com um proxy residencial." }, { status: 500 });
     }
 
   } else {
