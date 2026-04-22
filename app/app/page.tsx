@@ -38,6 +38,7 @@ export default function AppPage() {
   const [qrStatus, setQrStatus] = useState<"idle"|"waiting"|"uploading"|"done">("idle");
   const [qrVideoPath, setQrVideoPath] = useState<string|null>(null);
   const [copyToast, setCopyToast] = useState("");
+  const [showSettings, setShowSettings] = useState(false);
   const [showQrModal, setShowQrModal] = useState(false);
   const [showPubModal, setShowPubModal] = useState<Clip|null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -119,9 +120,8 @@ export default function AppPage() {
       <style>{`
         *{box-sizing:border-box}
         body{margin:0;background:#0d0d1a;color:#fff;font-family:Inter,system-ui,sans-serif}
-        .page{min-height:100vh;background:radial-gradient(ellipse 60% 40% at 20% 0%,rgba(124,58,237,.18) 0%,transparent 60%),radial-gradient(ellipse 50% 35% at 80% 10%,rgba(192,38,211,.12) 0%,transparent 55%),#0d0d1a;padding:40px 20px 80px}
+        .page{min-height:100vh;background:radial-gradient(ellipse 60% 40% at 20% 0%,rgba(124,58,237,.18) 0%,transparent 60%),radial-gradient(ellipse 50% 35% at 80% 10%,rgba(192,38,211,.12) 0%,transparent 55%),#0d0d1a;padding:24px 20px 80px}
         .wrap{max-width:1200px;margin:0 auto}
-        .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:32px}
         .logo{font-size:26px;font-weight:900;letter-spacing:2px;background:linear-gradient(90deg,#b57bee,#e040fb);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
         .grid{display:grid;grid-template-columns:420px 1fr;gap:20px;align-items:start}
         .card,.results{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:24px}
@@ -175,15 +175,26 @@ export default function AppPage() {
         .modal{background:#0d0d1a;border:1px solid rgba(255,255,255,.1);border-radius:24px;padding:32px;width:90%;max-width:400px;text-align:center;box-shadow:0 20px 40px rgba(0,0,0,.5);position:relative}
         .modal-close{position:absolute;top:16px;right:16px;background:none;border:none;color:rgba(255,255,255,.5);font-size:20px;cursor:pointer}
         .modal-close:hover{color:#fff}
+        .adv-panel{border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.02);border-radius:12px;margin:24px 0 0;overflow:hidden}
+        .adv-btn{width:100%;padding:16px;background:none;border:none;color:#fff;font-size:14px;font-weight:600;display:flex;justify-content:space-between;cursor:pointer}
+        .adv-btn:hover{background:rgba(255,255,255,.03)}
+        .adv-content{padding:0 16px;max-height:0;overflow:hidden;transition:max-height .4s ease, padding .4s ease; opacity:0}
+        .adv-content.open{max-height:500px;padding:0 16px 16px; opacity:1}
+        .saas-top{display:flex;justify-content:space-between;align-items:center;padding:16px 24px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:16px;margin-bottom:32px}
         @keyframes fadein{from{opacity:0}to{opacity:1}}
         @keyframes fadeup{from{opacity:0;transform:translateX(-50%) translateY(8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
         @media(max-width:900px){.grid{grid-template-columns:1fr}.style-grid{grid-template-columns:repeat(3,1fr)}.share-grid{grid-template-columns:1fr 1fr}}
       `}</style>
       {copyToast && <div className="toast">{copyToast}</div>}
       <div className="page"><div className="wrap">
-        <div className="topbar">
-          <div className="logo">KLIPORA</div>
-          <a href="/" style={{color:"#fff",textDecoration:"none",border:"1px solid rgba(255,255,255,.14)",padding:"10px 16px",borderRadius:10,background:"rgba(255,255,255,.04)",fontSize:14}}>← Voltar</a>
+        <div className="saas-top">
+          <div className="logo" style={{fontSize:22}}>KLIPORA</div>
+          <div style={{display:"flex",gap:16,alignItems:"center"}}>
+            <a href="/" style={{color:"rgba(255,255,255,.6)",textDecoration:"none",fontSize:14,fontWeight:600}}>← Voltar</a>
+            <div style={{color:"rgba(255,255,255,.6)",fontSize:14,fontWeight:600,cursor:"pointer",display:"none"}}>Projetos</div>
+            <div style={{background:"rgba(124,58,237,.15)",color:"#c4a0ff",padding:"6px 14px",borderRadius:100,fontSize:12,fontWeight:700,border:"1px solid rgba(124,58,237,.3)"}}>⚡ 60 min Free</div>
+            <div style={{width:34,height:34,borderRadius:"50%",background:"linear-gradient(135deg,#7c3aed,#c026d3)",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:14,marginLeft:8}}>JS</div>
+          </div>
         </div>
         <div className="grid">
           <div className="card">
@@ -233,28 +244,36 @@ export default function AppPage() {
               </div>
             )}
 
-            <div className="label"><span>Formato</span><strong>{format==="9:16"?"9:16 Vertical":"Original"}</strong></div>
-            <div className="btn-grid-2">
-              {[["original","📺 Original"],["9:16","📱 9:16"]].map(([v,l])=>(
-                <button key={v} className={`chip${format===v?" on":""}`} onClick={()=>setFormat(v)} disabled={loading}>{l}</button>
-              ))}
-            </div>
-
-            <div className="label"><span>Duração do clip</span><strong>{fmtD(duration)}</strong></div>
-            <div className="btn-grid-4">
-              {DURATIONS.map(d=>(
-                <button key={d} className={`chip${duration===d?" on":""}`} onClick={()=>setDuration(d)} disabled={loading}>{fmtD(d)}</button>
-              ))}
-            </div>
-
-            <div className="label"><span>Estilo de legenda</span><strong>{STYLES.find(s=>s.id===subtitleStyle)?.label}</strong></div>
-            <div className="style-grid">
-              {STYLES.map(s=>(
-                <div key={s.id} className={`style-card${subtitleStyle===s.id?" on":""}`} onClick={()=>setSubtitleStyle(s.id)}>
-                  <div className="style-preview" style={s.preview as React.CSSProperties}>Abc</div>
-                  <div className="style-name">{s.label}</div>
+            <div className="adv-panel">
+              <button className="adv-btn" onClick={()=>setShowSettings(!showSettings)}>
+                <span style={{display:"flex",alignItems:"center",gap:8}}>⚙️ Configurações Avançadas</span>
+                <span style={{transform:showSettings?"rotate(180deg)":"none",transition:".3s"}}>▼</span>
+              </button>
+              <div className={`adv-content${showSettings?" open":""}`}>
+                <div className="label" style={{marginTop:8}}><span>Formato</span><strong>{format==="9:16"?"9:16 Vertical":"Original"}</strong></div>
+                <div className="btn-grid-2">
+                  {[["original","📺 Original"],["9:16","📱 9:16"]].map(([v,l])=>(
+                    <button key={v} className={`chip${format===v?" on":""}`} onClick={()=>setFormat(v)} disabled={loading}>{l}</button>
+                  ))}
                 </div>
-              ))}
+
+                <div className="label"><span>Duração do clip</span><strong>{fmtD(duration)}</strong></div>
+                <div className="btn-grid-4">
+                  {DURATIONS.map(d=>(
+                    <button key={d} className={`chip${duration===d?" on":""}`} onClick={()=>setDuration(d)} disabled={loading}>{fmtD(d)}</button>
+                  ))}
+                </div>
+
+                <div className="label"><span>Estilo de legenda</span><strong>{STYLES.find(s=>s.id===subtitleStyle)?.label}</strong></div>
+                <div className="style-grid">
+                  {STYLES.map(s=>(
+                    <div key={s.id} className={`style-card${subtitleStyle===s.id?" on":""}`} onClick={()=>setSubtitleStyle(s.id)}>
+                      <div className="style-preview" style={s.preview as React.CSSProperties}>Abc</div>
+                      <div className="style-name">{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
 
             {loading && progress >= 0 && (
