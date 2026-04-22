@@ -159,12 +159,12 @@ export default function AppPage() {
         .err-title{color:#f87171;font-weight:700;margin-bottom:8px}
         .err-detail{font-family:monospace;font-size:11px;color:rgba(255,255,255,.5);white-space:pre-wrap;word-break:break-word;max-height:200px;overflow:auto}
         .fallback{margin-top:16px;background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.25);border-radius:12px;padding:16px}
-        .player{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:16px;overflow:hidden;margin-bottom:16px}
-        .player-top,.player-bottom{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;font-size:13px}
-        .player-top{border-bottom:1px solid rgba(255,255,255,.06)}
-        .player-bottom{border-top:1px solid rgba(255,255,255,.06);flex-wrap:wrap;gap:8px}
-        video{width:100%;display:block;background:#000;max-height:380px}
-        .share-pack{background:rgba(124,58,237,.06);border-top:1px solid rgba(124,58,237,.15);padding:14px}
+        .player{background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:24px;overflow:hidden;margin-bottom:24px;box-shadow:0 10px 30px rgba(0,0,0,.3)}
+        .player-top{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;font-size:14px;border-bottom:1px solid rgba(255,255,255,.04);background:rgba(255,255,255,.01)}
+        .video-wrapper{position:relative;width:100%;display:flex;justify-content:center;background:#050505;padding:20px 0}
+        .video-blur-bg{position:absolute;top:0;left:0;right:0;bottom:0;opacity:0.3;filter:blur(40px);z-index:0;pointer-events:none}
+        video{position:relative;z-index:1;max-height:480px;border-radius:16px;box-shadow:0 8px 24px rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.1)}
+        .player-bottom{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;background:rgba(255,255,255,.01);border-top:1px solid rgba(255,255,255,.04);flex-wrap:wrap;gap:12px}
         .share-title{font-size:11px;font-weight:700;color:#c4a0ff;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px}
         .share-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
         .share-btn{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:10px 6px;font-size:12px;font-weight:600;cursor:pointer;color:#fff;text-align:center}
@@ -334,20 +334,28 @@ export default function AppPage() {
               <>
                 <div className="player">
                   <div className="player-top">
-                    <span style={{fontWeight:700}}>Clip {activeClip.index}</span>
-                    <span style={{color:"rgba(255,255,255,.5)"}}>{fmt(activeClip.start)} → {fmt(activeClip.end)}</span>
+                    <span style={{fontWeight:800,color:"#fff",fontSize:16}}>Clip {activeClip.index}</span>
+                    <span style={{color:"#4ade80",background:"rgba(74,222,128,.1)",padding:"4px 10px",borderRadius:100,fontSize:12,fontWeight:700}}>🔥 Alto Potencial Viral</span>
                   </div>
-                  <video key={activeClip.clipUrl} controls autoPlay crossOrigin="anonymous">
-                    <source src={`/api/dl?url=${encodeURIComponent(activeClip.clipUrl)}`} type="video/mp4" />
-                    {activeClip.captions_url && <track kind="subtitles" src={activeClip.captions_url} srcLang="pt" label="Português" default />}
-                  </video>
+                  
+                  <div className="video-wrapper">
+                    <div className="video-blur-bg" style={{background:`url(/api/dl?url=${encodeURIComponent(activeClip.clipUrl)}) center/cover`}}></div>
+                    <video key={activeClip.clipUrl} controls autoPlay crossOrigin="anonymous">
+                      <source src={`/api/dl?url=${encodeURIComponent(activeClip.clipUrl)}`} type="video/mp4" />
+                      {activeClip.captions_url && <track kind="subtitles" src={activeClip.captions_url} srcLang="pt" label="Português" default />}
+                    </video>
+                  </div>
+
                   <div className="player-bottom">
-                    <span style={{color:"rgba(255,255,255,.45)",fontSize:13}}>{fmtKB(activeClip.sizeKB)}</span>
-                    <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                      {activeClip.captions_url && <a href={activeClip.captions_url} download style={{color:"#c4a0ff",fontSize:12,padding:"6px 10px",border:"1px solid rgba(124,58,237,.4)",borderRadius:6,textDecoration:"none"}}>📥 VTT</a>}
-                      {activeClip.srt_url && <a href={activeClip.srt_url} download style={{color:"#c4a0ff",fontSize:12,padding:"6px 10px",border:"1px solid rgba(124,58,237,.4)",borderRadius:6,textDecoration:"none"}}>📥 SRT</a>}
+                    <div style={{display:"flex",flexDirection:"column"}}>
+                      <span style={{color:"rgba(255,255,255,.8)",fontSize:14,fontWeight:600}}>{fmt(activeClip.start)} → {fmt(activeClip.end)}</span>
+                      <span style={{color:"rgba(255,255,255,.4)",fontSize:12,marginTop:2}}>{fmtKB(activeClip.sizeKB)}</span>
+                    </div>
+                    <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+                      {activeClip.captions_url && <a href={activeClip.captions_url} download style={{color:"#c4a0ff",fontSize:13,padding:"8px 14px",border:"1px solid rgba(124,58,237,.3)",background:"rgba(124,58,237,.1)",borderRadius:8,textDecoration:"none",fontWeight:600}}>VTT</a>}
+                      {activeClip.srt_url && <a href={activeClip.srt_url} download style={{color:"#c4a0ff",fontSize:13,padding:"8px 14px",border:"1px solid rgba(124,58,237,.3)",background:"rgba(124,58,237,.1)",borderRadius:8,textDecoration:"none",fontWeight:600}}>SRT</a>}
                       <button className="pub-btn" onClick={()=>setShowPubModal(activeClip)}>🚀 Publicar</button>
-                      <a className="dl" href={`/api/dl?url=${encodeURIComponent(activeClip.clipUrl)}&filename=${encodeURIComponent(activeClip.clipFilename)}&dl=1`} download={activeClip.clipFilename}>⬇ Baixar</a>
+                      <a className="dl" href={`/api/dl?url=${encodeURIComponent(activeClip.clipUrl)}&filename=${encodeURIComponent(activeClip.clipFilename)}&dl=1`} download={activeClip.clipFilename}>⬇ Baixar Clip</a>
                     </div>
                   </div>
 
