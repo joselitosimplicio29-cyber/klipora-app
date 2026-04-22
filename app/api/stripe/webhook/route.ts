@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import fs from "fs";
 import path from "path";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", { apiVersion: "2024-04-10" as any });
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "sk_test_dummy", { apiVersion: "2024-04-10" as any });
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
 export async function POST(req: Request) {
@@ -45,8 +45,7 @@ export async function POST(req: Request) {
         }
         break;
       }
-      case 'customer.subscription.deleted':
-      case 'customer.subscription.canceled': {
+      case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription;
         const customerId = subscription.customer as string;
         
