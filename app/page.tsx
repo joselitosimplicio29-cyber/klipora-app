@@ -55,6 +55,11 @@ export default function Landing() {
         .src-main{background:rgba(139,92,246,.15);color:#C084FC;border:1px solid rgba(139,92,246,.3)}
         .src-good{background:rgba(74,222,128,.15);color:#4ade80;border:1px solid rgba(74,222,128,.3)}
         .src-beta{background:rgba(251,191,36,.15);color:#fbbf24;border:1px solid rgba(251,191,36,.3)}
+        .feats{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;margin-bottom:64px}
+        .feat{padding:40px 24px;border-radius:24px;border:1px solid rgba(255,255,255,.06);background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));backdrop-filter:blur(10px);transition:all 300ms ease;box-shadow:0 10px 30px rgba(0,0,0,0.2);display:flex;flex-direction:column;align-items:center;text-align:center}
+        .feat:hover{transform:translateY(-5px);border-color:rgba(139,92,246,.3);box-shadow:0 20px 40px rgba(0,0,0,0.4),0 0 20px rgba(139,92,246,.1);background:linear-gradient(180deg,rgba(139,92,246,.05),rgba(255,255,255,.01))}
+        .feat h3{font-size:20px;font-weight:700;margin-bottom:12px;color:#F5F7FF}
+        .feat p{font-size:14px;color:#B8BED6;line-height:1.7}
         .toggle-row{display:flex;align-items:center;gap:16px;justify-content:center;margin-bottom:60px;font-size:16px;font-weight:500}
         .tog{position:relative;width:52px;height:28px}
         .tog input{opacity:0;width:0;height:0;position:absolute}
@@ -193,6 +198,85 @@ export default function Landing() {
               <div className="src-title">{s.title}</div>
               <div style={{ fontSize: 14, color: "#B8BED6", marginTop: 6, lineHeight: 1.7, flex: 1 }}>{s.desc}</div>
               <div className={`src-label ${s.cls}`}>{s.badge}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="animate" style={{ textAlign: "center" } as React.CSSProperties}>
+        <div className="sec-badge">Features</div>
+        <h2 className="sec-title">IA que trabalha por você</h2>
+        <p className="sec-sub">Do vídeo bruto ao clip pronto para postar.</p>
+        <div className="feats">
+          {[
+            { 
+              icon: (
+                <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="url(#bot-grad)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{filter:"drop-shadow(0 0 16px rgba(94,230,255,0.6))", marginBottom: 20}}>
+                  <defs><linearGradient id="bot-grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#5EE6FF" /><stop offset="100%" stopColor="#8B5CF6" /></linearGradient></defs>
+                  <rect x="3" y="11" width="18" height="10" rx="2"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path>
+                  <line x1="8" y1="16" x2="8" y2="16" strokeWidth="2"></line><line x1="16" y1="16" x2="16" y2="16" strokeWidth="2"></line>
+                </svg>
+              ), 
+              title: "AI Clipping", desc: "A IA analisa a transcrição e seleciona os melhores trechos automaticamente." 
+            },
+            { 
+              icon: (
+                <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="url(#mic2-grad)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{filter:"drop-shadow(0 0 16px rgba(192,132,252,0.6))", marginBottom: 20}}>
+                  <defs><linearGradient id="mic2-grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#C084FC" /><stop offset="100%" stopColor="#5EE6FF" /></linearGradient></defs>
+                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                  <line x1="12" y1="19" x2="12" y2="22"></line><line x1="8" y1="22" x2="16" y2="22"></line>
+                  <path d="M15 3h4" strokeDasharray="2 2"></path><path d="M17 7h2" strokeDasharray="2 2"></path>
+                </svg>
+              ), 
+              title: "Legendas automáticas", desc: "Whisper AI gera VTT e SRT sincronizados. Vários estilos visuais: Minimalista, Hormozi, Neon, Bold." 
+            },
+            { 
+              icon: (
+                <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="url(#crop-grad)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{filter:"drop-shadow(0 0 16px rgba(139,92,246,0.6))", marginBottom: 20}}>
+                  <defs><linearGradient id="crop-grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#8B5CF6" /><stop offset="100%" stopColor="#5EE6FF" /></linearGradient></defs>
+                  <rect x="5" y="2" width="14" height="20" rx="2" stroke="rgba(255,255,255,0.2)"></rect>
+                  <path d="M8 6h3v3" stroke="#8B5CF6"></path><path d="M16 18h-3v-3" stroke="#5EE6FF"></path>
+                  <text x="12" y="14" fill="#C084FC" stroke="none" fontSize="5" fontWeight="bold" textAnchor="middle">9:16</text>
+                </svg>
+              ), 
+              title: "Crop 9:16", desc: "Enquadramento automático para TikTok, Reels e Shorts. Sem edição manual." 
+            },
+            { 
+              icon: (
+                <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="url(#share-grad)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{filter:"drop-shadow(0 0 16px rgba(94,230,255,0.6))", marginBottom: 20}}>
+                  <defs><linearGradient id="share-grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#5EE6FF" /><stop offset="100%" stopColor="#C084FC" /></linearGradient></defs>
+                  <circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle>
+                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                </svg>
+              ), 
+              title: "Share Pack", desc: "Cada clip vem com legenda curta/longa, 3 hooks e 10 hashtags gerados por IA." 
+            },
+            { 
+              icon: (
+                <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="url(#exp-grad)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{filter:"drop-shadow(0 0 16px rgba(139,92,246,0.6))", marginBottom: 20}}>
+                  <defs><linearGradient id="exp-grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#C084FC" /><stop offset="100%" stopColor="#5EE6FF" /></linearGradient></defs>
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+              ), 
+              title: "Export em lote", desc: "Baixe todos os clips de uma vez com VTT e SRT inclusos." 
+            },
+            { 
+              icon: (
+                <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="url(#cal-grad)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{filter:"drop-shadow(0 0 16px rgba(94,230,255,0.6))", marginBottom: 20}}>
+                  <defs><linearGradient id="cal-grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#5EE6FF" /><stop offset="100%" stopColor="#8B5CF6" /></linearGradient></defs>
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line>
+                  <text x="12" y="16" fill="#C084FC" stroke="none" fontSize="6" fontWeight="bold" textAnchor="middle">31</text>
+                </svg>
+              ), 
+              title: "Agendamento", desc: "Publique ou agende direto para YouTube Shorts, Instagram/TikTok em breve." 
+            },
+          ].map((f, i) => (
+            <div key={i} className="feat">
+              {f.icon}
+              <h3>{f.title}</h3>
+              <p>{f.desc}</p>
             </div>
           ))}
         </div>
