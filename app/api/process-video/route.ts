@@ -5,59 +5,20 @@ import fs from "fs";
 import { r2 } from "@/lib/r2";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 
-// No modo standalone do Next.js, process.cwd() aponta para .next/standalone
-// O arquivo cookies.txt fica em /app (raiz do container Docker)
-// Procuramos em vários locais possíveis
 const ROOT_DIR = process.cwd();
 const DOWNLOADS_DIR = path.join(ROOT_DIR, "downloads");
-
-// Possíveis caminhos para o cookies.txt (em ordem de preferência)
-const COOKIES_CANDIDATES = [
-  path.join(ROOT_DIR, "cookies.txt"),          // /app/.next/standalone/cookies.txt
-  path.join(ROOT_DIR, "../../..", "cookies.txt"), // sobe 3 níveis do standalone
-  "/app/cookies.txt",                            // caminho absoluto no Docker
-  "/tmp/cookies.txt",                             // fallback gravável
-];
-
-const COOKIES_PATH = COOKIES_CANDIDATES.find(p => fs.existsSync(p)) ?? "/tmp/cookies.txt";
-
 const FFPROBE = `ffprobe`;
 const FFMPEG = `ffmpeg`;
 
 export const maxDuration = 300;
 
-/** Reconstrói o cookies.txt a partir da variável de ambiente YOUTUBE_COOKIES_B64 (base64). */
-function ensureCookiesFile(): string | null {
-  // Verifica se já existe em algum dos caminhos candidatos
-  for (const candidate of COOKIES_CANDIDATES) {
-    if (fs.existsSync(candidate)) {
-      console.log(`[cookies] Encontrado em: ${candidate}`);
-      return candidate;
-    }
-  }
-
-  // Tenta reconstruir a partir da env var (base64)
-  const b64 = process.env.YOUTUBE_COOKIES_B64;
-  if (!b64) {
-    console.warn(`[cookies] Nenhum cookies.txt encontrado. Candidatos testados: ${COOKIES_CANDIDATES.join(", ")}`);
-    return null;
-  }
-
-  // Tenta gravar nos candidatos em ordem, usando /tmp como último recurso
-  const targets = [...COOKIES_CANDIDATES, "/tmp/yt_cookies.txt"];
-  for (const target of targets) {
-    try {
-      fs.writeFileSync(target, Buffer.from(b64, "base64"));
-      console.log(`[cookies] Gravado a partir de YOUTUBE_COOKIES_B64 em: ${target}`);
-      return target;
-    } catch {
-      // tenta o próximo
-    }
-  }
-  console.error("[cookies] Falha ao gravar cookies.txt em todos os caminhos");
-  return null;
-}
-
+// Estilos de legenda (burn-in via FFmpeg ASS force_style)
+const SUBTITLE_STYLES: Record<string, string> = {
+  minimalista: `Fontname=Arial,FontSize=16,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,Outline=2,Shadow=1,Alignment=2,MarginV=40`,
+  hormozi: `Fontname=Arial,FontSize=20,PrimaryColour=&H0000FFFF,OutlineColour=&H00000000,Outline=4,Bold=1,Alignment=2,MarginV=40`,
+  neon: `Fontname=Arial,FontSize=16,PrimaryColour=&H00FFFF00,OutlineColour=&H00FF00FF,Outline=3,Alignment=2,MarginV=40`,
+  bold: `Fontname=Arial,FontSize=16,PrimaryColour=&H00FFFFFF,BackColour=&H90000000,BorderStyle=4,Outline=0,Shadow=0,Alignment=2,MarginV=40`,
+};
 
 async function uploadToR2(filePath: string, key: string): Promise<string> {
   const buffer = fs.readFileSync(filePath);
@@ -87,6 +48,14 @@ function secondsToVTT(s: number): string {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${sec}`;
 }
 
+function secondsToSRT(s: number): string {
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = Math.floor(s % 60);
+  const ms = Math.round((s % 1) * 1000);
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")},${String(ms).padStart(3, "0")}`;
+}
+
 function buildVTT(segments: Array<{ start: number; end: number; text: string }>): string {
   let vtt = "WEBVTT\n\n";
   for (const seg of segments) {
@@ -97,11 +66,23 @@ function buildVTT(segments: Array<{ start: number; end: number; text: string }>)
   return vtt;
 }
 
-async function generateSubtitles(
-  clipPath: string
-): Promise<{ vttContent: string; subtitle: string }> {
+function buildSRT(segments: Array<{ start: number; end: number; text: string }>): string {
+  return segments
+    .filter(s => s.text.trim())
+    .map((seg, i) => `${i + 1}\n${secondsToSRT(seg.start)} --> ${secondsToSRT(seg.end)}\n${seg.text.trim()}\n`)
+    .join("\n");
+}
+
+type Segment = { start: number; end: number; text: string };
+
+async function generateSubtitles(clipPath: string): Promise<{
+  vttContent: string;
+  srtContent: string;
+  subtitle: string;
+  segments: Segment[];
+}> {
   const GROQ_API_KEY = process.env.GROQ_API_KEY;
-  if (!GROQ_API_KEY) return { vttContent: "", subtitle: "" };
+  if (!GROQ_API_KEY) return { vttContent: "", srtContent: "", subtitle: "", segments: [] };
 
   const audioPath = clipPath.replace(".mp4", "_audio.mp3");
   try {
@@ -125,20 +106,64 @@ async function generateSubtitles(
     if (groqRes.ok) {
       const data = await groqRes.json() as {
         text?: string;
-        segments?: Array<{ start: number; end: number; text: string }>;
+        segments?: Segment[];
       };
       const segments = data.segments ?? [];
       return {
         vttContent: buildVTT(segments),
+        srtContent: buildSRT(segments),
         subtitle: data.text?.trim() ?? "",
+        segments,
       };
     }
   } catch {
-    // Legendas são opcionais — não interrompe o fluxo
+    // legendas são opcionais
   } finally {
     try { fs.unlinkSync(audioPath); } catch { }
   }
-  return { vttContent: "", subtitle: "" };
+  return { vttContent: "", srtContent: "", subtitle: "", segments: [] };
+}
+
+async function generateCopy(subtitle: string): Promise<{
+  legendas: { curta: string; media: string; longa: string };
+  hooks: string[];
+  hashtags: string[];
+}> {
+  const GROQ_API_KEY = process.env.GROQ_API_KEY;
+  if (!GROQ_API_KEY || !subtitle) {
+    return { legendas: { curta: "", media: "", longa: "" }, hooks: [], hashtags: [] };
+  }
+
+  try {
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${GROQ_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "llama3-8b-8192",
+        response_format: { type: "json_object" },
+        messages: [{
+          role: "user",
+          content: `Dado este trecho de vídeo, gere em JSON:
+- legendas: { curta (até 100 chars), media (até 200 chars), longa (até 400 chars) }
+- hooks: array com 3 frases de gancho de 1 linha
+- hashtags: array com 10 hashtags (5 nicho + 5 amplas)
+
+Trecho: "${subtitle.slice(0, 500)}"
+
+Responda APENAS com JSON válido.`,
+        }],
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+    if (res.ok) {
+      const data = await res.json() as { choices?: Array<{ message?: { content?: string } }> };
+      const content = data.choices?.[0]?.message?.content ?? "{}";
+      return JSON.parse(content);
+    }
+  } catch {
+    // copy é opcional
+  }
+  return { legendas: { curta: "", media: "", longa: "" }, hooks: [], hashtags: [] };
 }
 
 export async function POST(req: NextRequest) {
@@ -151,28 +176,27 @@ export async function POST(req: NextRequest) {
   const ALLOWED = [15, 30, 60, 120];
   let clipDuration = 30;
   let format = "original";
+  let subtitleStyle = "none";
+  let preuploadedPath: string | null = null;
 
   const contentType = req.headers.get("content-type") || "";
 
   if (contentType.includes("multipart/form-data")) {
     let formData: FormData;
-    try {
-      formData = await req.formData();
-    } catch {
-      return NextResponse.json({ error: "Erro ao ler FormData" }, { status: 400 });
-    }
+    try { formData = await req.formData(); }
+    catch { return NextResponse.json({ error: "Erro ao ler FormData" }, { status: 400 }); }
 
     const file = formData.get("video") as File | null;
     const durationRaw = formData.get("duration");
     const formatRaw = formData.get("format");
+    const styleRaw = formData.get("subtitleStyle");
 
-    if (!file || file.size === 0) {
-      return NextResponse.json({ error: "Nenhum arquivo enviado" }, { status: 400 });
-    }
+    if (!file || file.size === 0) return NextResponse.json({ error: "Nenhum arquivo enviado" }, { status: 400 });
 
     const dur = parseInt(String(durationRaw ?? "30"));
     clipDuration = ALLOWED.includes(dur) ? dur : 30;
     format = String(formatRaw ?? "original");
+    subtitleStyle = String(styleRaw ?? "none");
 
     try {
       const buffer = Buffer.from(await file.arrayBuffer());
@@ -183,175 +207,30 @@ export async function POST(req: NextRequest) {
     }
 
   } else if (contentType.includes("application/json")) {
-    let body: { url?: string; duration?: number; format?: string };
-    try {
-      body = await req.json();
-    } catch {
-      return NextResponse.json({ error: "Body inválido" }, { status: 400 });
-    }
-
-    const videoUrl = body?.url?.trim();
-    if (!videoUrl || !videoUrl.startsWith("http")) {
-      return NextResponse.json({ error: "URL inválida" }, { status: 400 });
-    }
+    let body: { preuploadedPath?: string; duration?: number; format?: string; subtitleStyle?: string };
+    try { body = await req.json(); }
+    catch { return NextResponse.json({ error: "Body inválido" }, { status: 400 }); }
 
     const dur = body?.duration ?? 30;
     clipDuration = ALLOWED.includes(dur) ? dur : 30;
     format = body?.format ?? "original";
+    subtitleStyle = body?.subtitleStyle ?? "none";
 
-    // Extrai o ID do vídeo do YouTube (suporta /watch?v=, youtu.be/, /shorts/)
-    const ytMatch = videoUrl.match(/(?:v=|youtu\.be\/|shorts\/)([a-zA-Z0-9_-]{11})/);
-    const videoId = ytMatch?.[1];
-    if (!videoId) {
-      return NextResponse.json({ error: "ID do vídeo não encontrado. Cole um link válido do YouTube." }, { status: 400 });
-    }
-
-    // Baixa o vídeo via cobalt → Invidious → Piped → yt-dlp (com proxy) → yt-dlp (sem proxy)
-    let downloaded = false;
-    const errors: string[] = [];  // coleta erros de cada tentativa para diagnóstico
-
-    // Tentativa 1: cobalt.tools
-    const cobaltInstances = ["https://api.cobalt.tools/", "https://cobalt.imput.net/"];
-    for (const cobaltBase of cobaltInstances) {
-      if (downloaded) break;
-      try {
-        const cobaltRes = await fetch(cobaltBase, {
-          method: "POST",
-          headers: { "Accept": "application/json", "Content-Type": "application/json", "User-Agent": "Mozilla/5.0" },
-          body: JSON.stringify({ url: `https://www.youtube.com/watch?v=${videoId}`, videoQuality: "720", downloadMode: "auto" }),
-          signal: AbortSignal.timeout(20000),
-        });
-        const cobaltData = await cobaltRes.json() as { status: string; url?: string; audio?: string; picker?: Array<{ url: string; type: string }> };
-        let dlUrl = cobaltData.url ?? cobaltData.audio;
-        if (!dlUrl && cobaltData.picker?.length) dlUrl = (cobaltData.picker.find(p => p.type === "video") ?? cobaltData.picker[0])?.url;
-        if (dlUrl && cobaltData.status !== "error") {
-          execSync(`${FFMPEG} -y -user_agent "Mozilla/5.0" -i "${dlUrl}" -c copy "${videoPath}"`, { timeout: 180000, stdio: "pipe" });
-          if (fs.existsSync(videoPath)) downloaded = true;
-        } else {
-          errors.push(`cobalt(${cobaltBase}): status=${cobaltData.status}`);
-        }
-      } catch (e) { errors.push(`cobalt(${cobaltBase}): ${String(e).slice(0, 100)}`); }
-    }
-
-    // Tentativa 2: Invidious
-    if (!downloaded) {
-      const invInstances = ["https://yewtu.be", "https://invidious.privacyredirect.com", "https://inv.tux.pizza", "https://invidious.flokinet.to"];
-      for (const instance of invInstances) {
-        if (downloaded) break;
-        try {
-          const apiRes = await fetch(`${instance}/api/v1/videos/${videoId}?fields=formatStreams`, { headers: { "User-Agent": "Mozilla/5.0" }, signal: AbortSignal.timeout(10000) });
-          if (!apiRes.ok) { errors.push(`invidious(${instance}): HTTP ${apiRes.status}`); continue; }
-          const { formatStreams = [] } = await apiRes.json() as { formatStreams?: Array<{ itag: string; container: string }> };
-          const mp4 = formatStreams.find(s => s.container === "mp4") ?? formatStreams[0];
-          if (mp4?.itag) {
-            const dlUrl = `${instance}/latest_version?id=${videoId}&itag=${mp4.itag}&local=true`;
-            execSync(`${FFMPEG} -y -user_agent "Mozilla/5.0" -i "${dlUrl}" -c copy "${videoPath}"`, { timeout: 180000, stdio: "pipe" });
-            if (fs.existsSync(videoPath)) downloaded = true;
-          }
-        } catch (e) { errors.push(`invidious(${instance}): ${String(e).slice(0, 100)}`); }
+    if (body?.preuploadedPath) {
+      // Arquivo já está no servidor (upload mobile)
+      const safePath = path.resolve(body.preuploadedPath);
+      if (!safePath.startsWith(DOWNLOADS_DIR)) {
+        return NextResponse.json({ error: "Caminho inválido" }, { status: 400 });
       }
-    }
-
-    // Tentativa 3: Piped API
-    if (!downloaded) {
-      const pipedInstances = ["https://pipedapi.kavin.rocks", "https://pipedapi.adminforge.de"];
-      for (const instance of pipedInstances) {
-        if (downloaded) break;
-        try {
-          const apiRes = await fetch(`${instance}/streams/${videoId}`, { headers: { "User-Agent": "Mozilla/5.0" }, signal: AbortSignal.timeout(10000) });
-          if (!apiRes.ok) { errors.push(`piped(${instance}): HTTP ${apiRes.status}`); continue; }
-          const data = await apiRes.json() as { videoStreams?: Array<{ url: string; format: string; videoOnly: boolean; quality: string }> };
-          const vStreams = (data.videoStreams ?? []).filter(s => !s.videoOnly && s.format === "MPEG_4");
-          const best = vStreams[0];
-          if (best?.url) {
-            execSync(`${FFMPEG} -y -user_agent "Mozilla/5.0" -i "${best.url}" -c copy "${videoPath}"`, { timeout: 180000, stdio: "pipe" });
-            if (fs.existsSync(videoPath)) downloaded = true;
-          }
-        } catch (e) { errors.push(`piped(${instance}): ${String(e).slice(0, 100)}`); }
+      if (!fs.existsSync(safePath)) {
+        return NextResponse.json({ error: "Arquivo não encontrado" }, { status: 404 });
       }
+      preuploadedPath = safePath;
+      // Copiar para videoPath padronizado
+      fs.copyFileSync(safePath, videoPath);
+    } else {
+      return NextResponse.json({ error: "Parâmetros inválidos. Use upload de arquivo ou preuploadedPath." }, { status: 400 });
     }
-
-    // Tentativa 4: yt-dlp com proxy + cliente iOS (bypassa n-challenge)
-    if (!downloaded) {
-      const proxyUrl = process.env.PROXY_URL;
-      const proxyFlag = proxyUrl ? `--proxy "${proxyUrl}"` : "";
-      const resolvedCookies = ensureCookiesFile();
-      const cookiesFlag = resolvedCookies ? `--cookies "${resolvedCookies}"` : "";
-      // iOS client retorna URLs pré-assinadas, não precisa de n-challenge JS
-      const baseFlags = `--extractor-args "youtube:player_client=ios" -f "best[ext=mp4]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best" --no-playlist --no-check-certificates --socket-timeout 30`;
-      try {
-        execSync(
-          `yt-dlp ${proxyFlag} ${cookiesFlag} ${baseFlags} -o "${videoPath}" "https://www.youtube.com/watch?v=${videoId}"`,
-          { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 300000 }
-        );
-        if (fs.existsSync(videoPath)) downloaded = true;
-      } catch (e) {
-        const err = e as { stderr?: string | Buffer; stdout?: string | Buffer; message?: string };
-        const detail = (err?.stderr?.toString?.() || err?.message || String(e)).slice(0, 1000);
-        errors.push(`yt-dlp+proxy+ios: ${detail}`);
-      }
-    }
-
-    // Tentativa 5: yt-dlp sem proxy + cliente iOS
-    if (!downloaded) {
-      const resolvedCookies = ensureCookiesFile();
-      const cookiesFlag = resolvedCookies ? `--cookies "${resolvedCookies}"` : "";
-      const baseFlags = `--extractor-args "youtube:player_client=ios" -f "best[ext=mp4]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best" --no-playlist --no-check-certificates --socket-timeout 30`;
-      try {
-        execSync(
-          `yt-dlp ${cookiesFlag} ${baseFlags} -o "${videoPath}" "https://www.youtube.com/watch?v=${videoId}"`,
-          { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 300000 }
-        );
-        if (fs.existsSync(videoPath)) downloaded = true;
-      } catch (e) {
-        const err = e as { stderr?: string | Buffer; stdout?: string | Buffer; message?: string };
-        const detail = (err?.stderr?.toString?.() || err?.message || String(e)).slice(0, 1000);
-        errors.push(`yt-dlp+ios: ${detail}`);
-      }
-    }
-
-    // Tentativa 6: yt-dlp com cliente Android (outra alternativa sem n-challenge)
-    if (!downloaded) {
-      const resolvedCookies = ensureCookiesFile();
-      const cookiesFlag = resolvedCookies ? `--cookies "${resolvedCookies}"` : "";
-      try {
-        execSync(
-          `yt-dlp ${cookiesFlag} --extractor-args "youtube:player_client=android" -f "best[ext=mp4]/best" --no-playlist --no-check-certificates -o "${videoPath}" "https://www.youtube.com/watch?v=${videoId}"`,
-          { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 300000 }
-        );
-        if (fs.existsSync(videoPath)) downloaded = true;
-      } catch (e) {
-        const err = e as { stderr?: string | Buffer; stdout?: string | Buffer; message?: string };
-        const detail = (err?.stderr?.toString?.() || err?.message || String(e)).slice(0, 1000);
-        errors.push(`yt-dlp+android: ${detail}`);
-      }
-    }
-
-    // Tentativa 7: yt-dlp sem flags de client (deixa yt-dlp escolher automaticamente)
-    if (!downloaded) {
-      const resolvedCookies = ensureCookiesFile();
-      const cookiesFlag = resolvedCookies ? `--cookies "${resolvedCookies}"` : "";
-      try {
-        execSync(
-          `yt-dlp ${cookiesFlag} -f "best[ext=mp4]/best" --no-playlist --no-check-certificates -o "${videoPath}" "https://www.youtube.com/watch?v=${videoId}"`,
-          { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 300000 }
-        );
-        if (fs.existsSync(videoPath)) downloaded = true;
-      } catch (e) {
-        const err = e as { stderr?: string | Buffer; stdout?: string | Buffer; message?: string };
-        const detail = (err?.stderr?.toString?.() || err?.message || String(e)).slice(0, 1000);
-        errors.push(`yt-dlp+auto: ${detail}`);
-      }
-    }
-
-    if (!downloaded) {
-      return NextResponse.json({
-        error: "Não foi possível baixar o vídeo do YouTube",
-        detail: errors.join(" | "),
-      }, { status: 500 });
-    }
-
-
   } else {
     return NextResponse.json({ error: "Content-Type não suportado" }, { status: 400 });
   }
@@ -385,12 +264,15 @@ export async function POST(req: NextRequest) {
     index: number;
     subtitle: string;
     captions_url: string;
+    srt_url: string;
+    copy: { legendas: { curta: string; media: string; longa: string }; hooks: string[]; hashtags: string[] };
   }[] = [];
   const clipErrors: string[] = [];
 
   const totalClips = Math.floor(totalSeconds / clipDuration);
   const videoFilter = format === "9:16" ? `-vf "crop=ih*9/16:ih:(iw-ih*9/16)/2:0"` : "";
   const videoCodec = format === "9:16" ? "-c:v libx264 -preset fast -crf 23" : "-c:v copy";
+  const hasStyle = subtitleStyle !== "none" && subtitleStyle in SUBTITLE_STYLES;
 
   for (let i = 0; i < totalClips; i++) {
     const start = i * clipDuration;
@@ -401,56 +283,75 @@ export async function POST(req: NextRequest) {
       const ffmpegCmd = `${FFMPEG} -y -i "${videoPath}" -ss ${start} -t ${clipDuration} ${videoFilter} ${videoCodec} -c:a copy "${clipPath}"`;
       execSync(ffmpegCmd, { cwd: ROOT_DIR, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] });
 
-      if (fs.existsSync(clipPath)) {
-        const sizeKB = Math.round(fs.statSync(clipPath).size / 1024);
-        const r2Key = `clips/${clipFilename}`;
+      if (!fs.existsSync(clipPath)) { clipErrors.push(`Clip ${i + 1}: FFmpeg não gerou o arquivo`); continue; }
 
-        // Gera legendas sincronizadas via Groq Whisper (opcional)
-        const { vttContent, subtitle } = await generateSubtitles(clipPath);
+      const sizeKB = Math.round(fs.statSync(clipPath).size / 1024);
+      const r2Key = `clips/${clipFilename}`;
 
-        // Faz upload do VTT para o R2 se gerado
-        let captions_url = "";
-        if (vttContent) {
-          const vttKey = `captions/${clipFilename.replace(".mp4", ".vtt")}`;
-          captions_url = await uploadTextToR2(vttContent, vttKey, "text/vtt");
+      // Gera transcrição
+      const { vttContent, srtContent, subtitle, segments } = await generateSubtitles(clipPath);
+
+      // Gera copy IA
+      const copy = await generateCopy(subtitle);
+
+      // Burn-in de legenda se estilo selecionado
+      let finalClipPath = clipPath;
+      if (hasStyle && srtContent) {
+        const srtPath = clipPath.replace(".mp4", ".srt");
+        fs.writeFileSync(srtPath, srtContent);
+        const burnedPath = clipPath.replace(".mp4", "_sub.mp4");
+        const styleStr = SUBTITLE_STYLES[subtitleStyle];
+        try {
+          // Escapa a path para o filtro do ffmpeg (Windows e Linux)
+          const escapedSrt = srtPath.replace(/\\/g, "/").replace(/:/g, "\\:");
+          execSync(
+            `${FFMPEG} -y -i "${clipPath}" -vf "subtitles='${escapedSrt}':force_style='${styleStr}'" -c:v libx264 -preset fast -crf 23 -c:a copy "${burnedPath}"`,
+            { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: 120000 }
+          );
+          if (fs.existsSync(burnedPath)) {
+            finalClipPath = burnedPath;
+            try { fs.unlinkSync(clipPath); } catch { }
+          }
+        } catch {
+          // burn-in falhou — usa clip original
+        } finally {
+          try { fs.unlinkSync(srtPath); } catch { }
         }
-
-        const publicUrl = await uploadToR2(clipPath, r2Key);
-
-        clips.push({
-          index: i + 1,
-          clipUrl: publicUrl,
-          clipFilename,
-          start,
-          end: start + clipDuration,
-          sizeKB,
-          subtitle,
-          captions_url,
-        });
-
-        try { fs.unlinkSync(clipPath); } catch { }
-      } else {
-        clipErrors.push(`Clip ${i + 1}: FFmpeg não gerou o arquivo`);
       }
+
+      // Upload do clip para R2
+      const publicUrl = await uploadToR2(finalClipPath, r2Key);
+
+      // Upload VTT
+      let captions_url = "";
+      if (vttContent) {
+        const vttKey = `captions/${clipFilename.replace(".mp4", ".vtt")}`;
+        captions_url = await uploadTextToR2(vttContent, vttKey, "text/vtt");
+      }
+
+      // Upload SRT
+      let srt_url = "";
+      if (srtContent) {
+        const srtKey = `captions/${clipFilename.replace(".mp4", ".srt")}`;
+        srt_url = await uploadTextToR2(srtContent, srtKey, "text/plain");
+      }
+
+      clips.push({ index: i + 1, clipUrl: publicUrl, clipFilename, start, end: start + clipDuration, sizeKB, subtitle, captions_url, srt_url, copy });
+
+      try { fs.unlinkSync(finalClipPath); } catch { }
     } catch (err: unknown) {
       const e = err as { message?: string; stderr?: string | Buffer };
       const detail = e?.stderr?.toString?.() || e?.message || String(err);
       clipErrors.push(`Clip ${i + 1}: ${detail.slice(0, 300)}`);
-      console.error(`Erro no clip ${i + 1}:`, detail);
     }
   }
 
+  // Limpar arquivo mobile pré-enviado
+  if (preuploadedPath) try { fs.unlinkSync(preuploadedPath); } catch { }
   try { fs.unlinkSync(videoPath); } catch { }
 
   if (clips.length === 0) {
-    return NextResponse.json({
-      error: "Nenhum clip gerado",
-      detail: clipErrors.join("\n"),
-      clipErrors,
-      totalSeconds,
-      clipDuration,
-      downloadsDir: DOWNLOADS_DIR,
-    }, { status: 500 });
+    return NextResponse.json({ error: "Nenhum clip gerado", detail: clipErrors.join("\n"), clipErrors, totalSeconds, clipDuration, downloadsDir: DOWNLOADS_DIR }, { status: 500 });
   }
 
   return NextResponse.json({
@@ -461,6 +362,7 @@ export async function POST(req: NextRequest) {
     clipDuration,
     totalSeconds,
     format,
+    subtitleStyle,
     videoSizeKB: Math.round(clips.reduce((acc, c) => acc + c.sizeKB, 0)),
   });
 }
