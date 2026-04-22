@@ -38,6 +38,8 @@ export default function AppPage() {
   const [qrStatus, setQrStatus] = useState<"idle"|"waiting"|"uploading"|"done">("idle");
   const [qrVideoPath, setQrVideoPath] = useState<string|null>(null);
   const [copyToast, setCopyToast] = useState("");
+  const [showQrModal, setShowQrModal] = useState(false);
+  const [showPubModal, setShowPubModal] = useState<Clip|null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const pollRef = useRef<NodeJS.Timeout|null>(null);
 
@@ -46,7 +48,7 @@ export default function AppPage() {
   useEffect(() => () => stopPoll(), [stopPoll]);
 
   async function generateQr() {
-    setQrStatus("waiting"); setQrToken(null); setQrUrl(null); setQrVideoPath(null);
+    setQrStatus("waiting"); setQrToken(null); setQrUrl(null); setQrVideoPath(null); setShowQrModal(true);
     const res = await fetch("/api/mobile-upload/create", { method: "POST" });
     const { token, uploadUrl } = await res.json();
     setQrToken(token); setQrUrl(uploadUrl);
@@ -54,7 +56,7 @@ export default function AppPage() {
       const s = await fetch(`/api/mobile-upload/status/${token}`).then(r => r.json());
       if (s.status === "uploading") setQrStatus("uploading");
       if (s.status === "done") {
-        stopPoll(); setQrStatus("done"); setQrVideoPath(s.videoPath);
+        stopPoll(); setQrStatus("done"); setQrVideoPath(s.videoPath); setShowQrModal(false);
       }
     }, 2000);
   }
@@ -168,6 +170,12 @@ export default function AppPage() {
         .style-preview{font-size:11px;font-weight:700;height:22px;display:flex;align-items:center;justify-content:center;border-radius:4px;margin-bottom:6px}
         .style-name{font-size:10px;color:rgba(255,255,255,.5)}
         .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(124,58,237,.9);color:#fff;padding:10px 20px;border-radius:100px;font-size:14px;font-weight:600;z-index:999;pointer-events:none;animation:fadeup .3s ease}
+        .pub-btn{text-decoration:none;background:linear-gradient(135deg,#e040fb,#7c3aed);color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:700;border:none;cursor:pointer}
+        .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.8);backdrop-filter:blur(10px);z-index:999;display:flex;align-items:center;justify-content:center;animation:fadein .3s ease}
+        .modal{background:#0d0d1a;border:1px solid rgba(255,255,255,.1);border-radius:24px;padding:32px;width:90%;max-width:400px;text-align:center;box-shadow:0 20px 40px rgba(0,0,0,.5);position:relative}
+        .modal-close{position:absolute;top:16px;right:16px;background:none;border:none;color:rgba(255,255,255,.5);font-size:20px;cursor:pointer}
+        .modal-close:hover{color:#fff}
+        @keyframes fadein{from{opacity:0}to{opacity:1}}
         @keyframes fadeup{from{opacity:0;transform:translateX(-50%) translateY(8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
         @media(max-width:900px){.grid{grid-template-columns:1fr}.style-grid{grid-template-columns:repeat(3,1fr)}.share-grid{grid-template-columns:1fr 1fr}}
       `}</style>
@@ -216,19 +224,11 @@ export default function AppPage() {
 
             {tab==="qr" && (
               <div className="qr-box">
-                {qrStatus==="idle" && (
-                  <button className="chip" style={{width:"100%",padding:14,fontSize:15}} onClick={generateQr}>📱 Gerar QR Code</button>
-                )}
-                {(qrStatus==="waiting"||qrStatus==="uploading") && qrUrl && (
-                  <>
-                    <p style={{fontSize:13,color:"rgba(255,255,255,.6)",marginBottom:12}}>Escaneie com o celular:</p>
-                    <img className="qr-img" src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrUrl)}`} width={200} height={200} alt="QR Code" />
-                    <p style={{fontSize:13,color:"rgba(255,255,255,.4)",marginTop:12}}>{qrStatus==="waiting"?"⏳ Aguardando envio...":"⬆️ Enviando vídeo..."}</p>
-                    <button className="chip" style={{marginTop:8}} onClick={()=>{stopPoll();setQrStatus("idle");}}>Cancelar</button>
-                  </>
+                {qrStatus!=="done" && (
+                  <button className="submit" style={{width:"100%",padding:14,fontSize:15}} onClick={generateQr}>📱 Gerar QR Code do Celular</button>
                 )}
                 {qrStatus==="done" && (
-                  <div style={{color:"#4ade80",fontWeight:700,fontSize:15}}>✅ Vídeo recebido! Clique em Gerar clips.</div>
+                  <div style={{color:"#4ade80",fontWeight:700,fontSize:15}}>✅ Vídeo recebido via celular! Pode gerar os clips.</div>
                 )}
               </div>
             )}
@@ -309,6 +309,7 @@ export default function AppPage() {
                     <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                       {activeClip.captions_url && <a href={activeClip.captions_url} download style={{color:"#c4a0ff",fontSize:12,padding:"6px 10px",border:"1px solid rgba(124,58,237,.4)",borderRadius:6,textDecoration:"none"}}>📥 VTT</a>}
                       {activeClip.srt_url && <a href={activeClip.srt_url} download style={{color:"#c4a0ff",fontSize:12,padding:"6px 10px",border:"1px solid rgba(124,58,237,.4)",borderRadius:6,textDecoration:"none"}}>📥 SRT</a>}
+                      <button className="pub-btn" onClick={()=>setShowPubModal(activeClip)}>🚀 Publicar</button>
                       <a className="dl" href={`/api/dl?url=${encodeURIComponent(activeClip.clipUrl)}&filename=${encodeURIComponent(activeClip.clipFilename)}&dl=1`} download={activeClip.clipFilename}>⬇ Baixar</a>
                     </div>
                   </div>
@@ -349,6 +350,49 @@ export default function AppPage() {
           </div>
         </div>
       </div></div>
+
+      {showQrModal && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <button className="modal-close" onClick={()=>{stopPoll();setQrStatus("idle");setShowQrModal(false);}}>✕</button>
+            <h2 style={{margin:"0 0 8px",fontSize:20}}>Conectar Celular</h2>
+            <p style={{fontSize:13,color:"rgba(255,255,255,.6)",marginBottom:24,lineHeight:1.6}}>
+              Abra a câmera do seu celular, escaneie o QR Code abaixo e selecione o vídeo na sua galeria. Ele será enviado direto para cá!
+            </p>
+            {qrUrl ? (
+              <img className="qr-img" src={`https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(qrUrl)}`} width={240} height={240} alt="QR Code" style={{background:"#fff",padding:8}} />
+            ) : (
+              <div style={{height:240,display:"flex",alignItems:"center",justifyContent:"center",color:"rgba(255,255,255,.4)"}}>Gerando...</div>
+            )}
+            <div style={{marginTop:24,fontSize:14,fontWeight:600,color:qrStatus==="uploading"?"#c026d3":"#7c3aed"}}>
+              {qrStatus==="uploading" ? "⬆️ Recebendo vídeo (não feche a aba no celular)..." : "⏳ Aguardando leitura..."}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showPubModal && (
+        <div className="modal-overlay">
+          <div className="modal" style={{maxWidth:500}}>
+            <button className="modal-close" onClick={()=>setShowPubModal(null)}>✕</button>
+            <h2 style={{margin:"0 0 8px",fontSize:20}}>Distribuição Viral</h2>
+            <p style={{fontSize:13,color:"rgba(255,255,255,.6)",marginBottom:24}}>
+              Selecione o destino para publicar ou agendar seu clip.
+            </p>
+            <div style={{display:"grid",gap:12}}>
+              <button className="chip" style={{padding:16,display:"flex",alignItems:"center",gap:12,justifyContent:"center",fontSize:15}} onClick={()=>{copy(showPubModal.copy?.legendas?.curta || "","Legenda copiada!");window.open("https://youtube.com/upload","_blank");}}>
+                <span style={{color:"#ff0000",fontSize:20}}>▶</span> YouTube Shorts (Copiar Legenda e Abrir)
+              </button>
+              <button className="chip" style={{padding:16,display:"flex",alignItems:"center",gap:12,justifyContent:"center",fontSize:15,opacity:.5}} disabled>
+                <span style={{color:"#E1306C",fontSize:20}}>📸</span> Instagram Reels (Em breve)
+              </button>
+              <button className="chip" style={{padding:16,display:"flex",alignItems:"center",gap:12,justifyContent:"center",fontSize:15,opacity:.5}} disabled>
+                <span style={{color:"#fff",fontSize:20}}>🎵</span> TikTok (Em breve)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

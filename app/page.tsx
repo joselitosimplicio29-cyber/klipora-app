@@ -1,16 +1,28 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 const P = { starter: 67, pro: 127, agency: 247 };
 export default function Landing() {
   const [ann, setAnn] = useState(false);
   const disc = (n: number) => ann ? Math.round(n * 0.8) : n;
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("visible");
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1 });
+    document.querySelectorAll(".animate").forEach(el => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
   return (
     <>
       <style>{`
         *{box-sizing:border-box;margin:0;padding:0}
         body{background:#08080f;color:#fff;font-family:Inter,system-ui,sans-serif}
         .bar{background:linear-gradient(90deg,#7c3aed,#c026d3);padding:10px;text-align:center;font-size:13px;font-weight:600}
-        nav{display:flex;align-items:center;justify-content:space-between;padding:0 5%;height:64px;background:rgba(8,8,15,.9);backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,.06);position:sticky;top:0;z-index:100}
+        nav{display:flex;align-items:center;justify-content:space-between;padding:0 8%;height:80px;background:rgba(8,8,15,.9);backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,.06);position:sticky;top:0;z-index:100}
         .logo{font-size:22px;font-weight:900;letter-spacing:2px;background:linear-gradient(90deg,#b57bee,#e040fb);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
         .nav-links{display:flex;gap:28px;list-style:none}
         .nav-links a{color:rgba(255,255,255,.5);text-decoration:none;font-size:14px}
@@ -22,7 +34,8 @@ export default function Landing() {
         .hl{background:linear-gradient(90deg,#9d6ffd,#e040fb);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
         .sub{font-size:18px;color:rgba(255,255,255,.55);max-width:500px;line-height:1.8;margin:0 auto 40px}
         .btns{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-bottom:60px}
-        .btn-sec{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.15);color:#fff;padding:14px 32px;border-radius:12px;font-size:15px;cursor:pointer}
+        .btn-sec{background:transparent;border:1px solid rgba(255,255,255,.2);color:#fff;padding:14px 32px;border-radius:12px;font-size:15px;cursor:pointer;transition:.3s}
+        .btn-sec:hover{background:rgba(255,255,255,.05)}
         .btn-main{background:linear-gradient(135deg,#7c3aed,#c026d3);border:none;color:#fff;padding:14px 32px;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 0 40px rgba(124,58,237,.4)}
         .stats{display:flex;gap:48px;flex-wrap:wrap;justify-content:center}
         .sn{font-size:36px;font-weight:900;background:linear-gradient(90deg,#9d6ffd,#e040fb);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
@@ -82,6 +95,9 @@ export default function Landing() {
         footer{border-top:1px solid rgba(255,255,255,.06);padding:36px 5%;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px}
         .fl{display:flex;gap:20px}
         .fl a{color:rgba(255,255,255,.35);text-decoration:none;font-size:13px}
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .animate { opacity: 0; }
+        .animate.visible { animation: fadeInUp 0.8s ease-out forwards; }
         @media(max-width:768px){.nav-links,.nav-links+*{display:none}.stats{gap:28px}.plans,.feats,.steps,.sources{grid-template-columns:1fr}footer{flex-direction:column;text-align:center}}
       `}</style>
 
@@ -97,7 +113,7 @@ export default function Landing() {
         <button className="btn-p" onClick={() => window.location.href = "/app"}>Começar grátis</button>
       </nav>
 
-      <div className="hero">
+      <div className="hero animate">
         <div className="badge">⚡ Upload-First · IA de Edição · Legendas Profissionais</div>
         <h1>1 vídeo.<br /><span className="hl">Dezenas de clips prontos.</span></h1>
         <p className="sub">Suba o vídeo do PC, cole um link do Drive ou escaneie o QR com o celular. A IA corta, legenda e empacota tudo.</p>
@@ -112,7 +128,7 @@ export default function Landing() {
         </div>
       </div>
 
-      <section style={{ textAlign: "center" } as React.CSSProperties}>
+      <section className="animate" style={{ textAlign: "center" } as React.CSSProperties}>
         <div className="sec-badge">Entradas suportadas</div>
         <h2 className="sec-title">Seu vídeo entra de qualquer jeito</h2>
         <p className="sec-sub">Sem complicação. Sem depender de terceiros.</p>
@@ -133,7 +149,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <section style={{ textAlign: "center" } as React.CSSProperties}>
+      <section className="animate" style={{ textAlign: "center" } as React.CSSProperties}>
         <div className="sec-badge">Features</div>
         <h2 className="sec-title">IA que trabalha por você</h2>
         <p className="sec-sub">Do vídeo bruto ao clip pronto para postar.</p>
@@ -155,7 +171,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <section id="como" style={{ textAlign: "center" } as React.CSSProperties}>
+      <section id="como" className="animate" style={{ textAlign: "center" } as React.CSSProperties}>
         <div className="sec-badge">Como funciona</div>
         <h2 className="sec-title">3 passos. Resultado imediato.</h2>
         <p className="sec-sub">Sem edição. Sem complicação.</p>
@@ -175,7 +191,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <section id="precos" style={{ textAlign: "center" } as React.CSSProperties}>
+      <section id="precos" className="animate" style={{ textAlign: "center" } as React.CSSProperties}>
         <div className="sec-badge">Planos</div>
         <h2 className="sec-title">Simples e transparente</h2>
         <p className="sec-sub">Cancele quando quiser. Sem surpresas.</p>
@@ -208,7 +224,7 @@ export default function Landing() {
         {ann && <p style={{ marginTop: 20, fontSize: 13, color: "rgba(255,255,255,.35)" }}>*Preços no plano anual com 20% de desconto</p>}
       </section>
 
-      <section id="faq">
+      <section id="faq" className="animate">
         <div style={{ textAlign: "center", marginBottom: 48 } as React.CSSProperties}>
           <div className="sec-badge">FAQ</div>
           <h2 className="sec-title">Perguntas frequentes</h2>
@@ -235,7 +251,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <section style={{ textAlign: "center", padding: "60px 5%" } as React.CSSProperties}>
+      <section className="animate" style={{ textAlign: "center", padding: "60px 5%" } as React.CSSProperties}>
         <div style={{ maxWidth: 540, margin: "0 auto", background: "linear-gradient(135deg,rgba(124,58,237,.12),rgba(192,38,211,.08))", border: "1px solid rgba(124,58,237,.3)", borderRadius: 28, padding: "48px 36px" }}>
           <h2 style={{ fontSize: "clamp(24px,4vw,36px)", fontWeight: 900, letterSpacing: -1, marginBottom: 14 }}>Pronto para começar?</h2>
           <p style={{ color: "rgba(255,255,255,.5)", marginBottom: 28, lineHeight: 1.7 }}>Acesso gratuito. Sem cartão de crédito.</p>
