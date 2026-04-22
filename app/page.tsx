@@ -47,27 +47,14 @@ export default function Landing() {
         .sec-title{font-size:clamp(32px,5vw,52px);font-weight:900;letter-spacing:-1.5px;margin-bottom:16px}
         .sec-sub{color:#B8BED6;margin-bottom:64px;font-size:18px;line-height:1.6}
         .sources{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:24px;margin-bottom:0}
-        .source-card{padding:32px 24px;border-radius:24px;border:1px solid rgba(255,255,255,.06);background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));backdrop-filter:blur(10px);transition:all 300ms ease;box-shadow:0 10px 30px rgba(0,0,0,0.2)}
+        .source-card{padding:40px 24px;border-radius:24px;border:1px solid rgba(255,255,255,.06);background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));backdrop-filter:blur(10px);transition:all 300ms ease;box-shadow:0 10px 30px rgba(0,0,0,0.2);display:flex;flex-direction:column;align-items:center;text-align:center}
         .source-card:hover{transform:translateY(-5px);border-color:rgba(139,92,246,.3);box-shadow:0 20px 40px rgba(0,0,0,0.4),0 0 20px rgba(139,92,246,.1)}
         .source-card.main{border-color:rgba(139,92,246,.3);background:linear-gradient(180deg,rgba(139,92,246,.08),rgba(139,92,246,.02));box-shadow:0 10px 40px rgba(139,92,246,.1)}
-        .src-icon{font-size:36px;margin-bottom:16px;filter:drop-shadow(0 4px 8px rgba(0,0,0,0.4))}
-        .src-title{font-weight:700;margin-bottom:8px;font-size:18px}
-        .src-label{font-size:12px;margin-top:16px;padding:4px 12px;border-radius:100px;display:inline-block;font-weight:600}
-        .src-main{background:rgba(139,92,246,.2);color:#C084FC;border:1px solid rgba(139,92,246,.4)}
+        .src-title{font-weight:700;margin-bottom:12px;font-size:20px}
+        .src-label{font-size:12px;margin-top:24px;padding:6px 16px;border-radius:100px;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-weight:700;width:fit-content}
+        .src-main{background:rgba(139,92,246,.15);color:#C084FC;border:1px solid rgba(139,92,246,.3)}
         .src-good{background:rgba(74,222,128,.15);color:#4ade80;border:1px solid rgba(74,222,128,.3)}
-        .src-beta{background:rgba(251,191,36,.12);color:#fbbf24;border:1px solid rgba(251,191,36,.3)}
-        .feats{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px}
-        .feat{padding:32px;border-radius:24px;border:1px solid rgba(255,255,255,.06);background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));transition:all 300ms ease}
-        .feat:hover{transform:translateY(-5px);border-color:rgba(94,230,255,.3);background:linear-gradient(180deg,rgba(94,230,255,.05),rgba(255,255,255,.01))}
-        .feat-icon{font-size:36px;margin-bottom:20px;display:inline-block;padding:12px;background:rgba(255,255,255,.03);border-radius:16px;border:1px solid rgba(255,255,255,.08)}
-        .feat h3{font-size:20px;font-weight:700;margin-bottom:12px}
-        .feat p{font-size:15px;color:#B8BED6;line-height:1.7}
-        .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px}
-        .step{padding:40px 32px;border-radius:24px;border:1px solid rgba(255,255,255,.06);background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));text-align:center;position:relative}
-        .step::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.2),transparent);opacity:0.5}
-        .step-num{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#8B5CF6,#5EE6FF);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;margin:0 auto 24px;box-shadow:0 10px 20px rgba(139,92,246,.3)}
-        .step h3{font-weight:700;margin-bottom:12px;font-size:22px}
-        .step p{font-size:15px;color:#B8BED6;line-height:1.7}
+        .src-beta{background:rgba(251,191,36,.15);color:#fbbf24;border:1px solid rgba(251,191,36,.3)}
         .toggle-row{display:flex;align-items:center;gap:16px;justify-content:center;margin-bottom:60px;font-size:16px;font-weight:500}
         .tog{position:relative;width:52px;height:28px}
         .tog input{opacity:0;width:0;height:0;position:absolute}
@@ -141,61 +128,71 @@ export default function Landing() {
       <section className="animate" style={{ textAlign: "center" } as React.CSSProperties}>
         <div className="sec-badge">Entradas suportadas</div>
         <h2 className="sec-title">Seu vídeo entra de qualquer jeito</h2>
-        <p className="sec-sub">Sem complicação. Sem depender de terceiros.</p>
+        <p className="sec-sub">Arraste e solte. Sem complicações. Sem limites.</p>
         <div className="sources">
           {[
-            { icon: "📁", title: "Upload direto", desc: "Arraste o arquivo MP4, MOV, MKV, AVI, WebM ou MP3 do seu PC.", badge: "Principal", cls: "src-main", card: "main" },
-            { icon: "🔗", title: "Link direto", desc: "Cole um link do Google Drive, Dropbox ou qualquer CDN.", badge: "Recomendado", cls: "src-good", card: "" },
-            { icon: "📱", title: "QR do Celular", desc: "Gera um QR no PC, escaneia com o celular e o vídeo vai direto ao projeto.", badge: "Diferencial ⭐", cls: "src-main", card: "main" },
-            { icon: "🎙️", title: "RSS de Podcast", desc: "Cole o feed RSS do seu podcast e importe episódios diretamente.", badge: "Em breve", cls: "src-beta", card: "" },
+            { 
+              icon: (
+                <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="url(#upload-grad)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{filter:"drop-shadow(0 0 16px rgba(139,92,246,0.6))", marginBottom: 20}}>
+                  <defs><linearGradient id="upload-grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#C084FC" /><stop offset="100%" stopColor="#5EE6FF" /></linearGradient></defs>
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                  <path d="M12 11v6"></path><path d="M9 14l3-3 3 3"></path>
+                </svg>
+              ), 
+              title: "Upload direto", 
+              desc: "Arraste o arquivo MP4, MOV, MKV, AVI, WebM ou MP3 do seu PC.", 
+              badge: "Principal", 
+              cls: "src-main", card: "main" 
+            },
+            { 
+              icon: (
+                <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="url(#link-grad)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{filter:"drop-shadow(0 0 16px rgba(74,222,128,0.5))", marginBottom: 20}}>
+                  <defs><linearGradient id="link-grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#4ade80" /><stop offset="100%" stopColor="#06b6d4" /></linearGradient></defs>
+                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                  <circle cx="12" cy="12" r="10" strokeDasharray="4 4" stroke="rgba(74,222,128,0.5)" strokeWidth="1"/>
+                </svg>
+              ), 
+              title: "Link direto", 
+              desc: "Cole um link do Google Drive, Dropbox ou qualquer CDN.", 
+              badge: "✓ Recomendado", 
+              cls: "src-good", card: "" 
+            },
+            { 
+              icon: (
+                <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="url(#qr-grad)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{filter:"drop-shadow(0 0 16px rgba(94,230,255,0.6))", marginBottom: 20}}>
+                  <defs><linearGradient id="qr-grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#5EE6FF" /><stop offset="100%" stopColor="#8B5CF6" /></linearGradient></defs>
+                  <rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect>
+                  <rect x="14" y="14" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect>
+                  <line x1="2" y1="12" x2="22" y2="12" stroke="#5EE6FF" strokeWidth="2" style={{filter:"drop-shadow(0 0 6px #5EE6FF)"}} />
+                </svg>
+              ), 
+              title: "QR do Celular", 
+              desc: "Gera um QR no PC, escaneia com o celular e o vídeo vai direto ao projeto.", 
+              badge: "⭐ Diferencial", 
+              cls: "src-main", card: "main" 
+            },
+            { 
+              icon: (
+                <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="url(#mic-grad)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{filter:"drop-shadow(0 0 16px rgba(251,191,36,0.6))", marginBottom: 20}}>
+                  <defs><linearGradient id="mic-grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#fbbf24" /><stop offset="100%" stopColor="#f97316" /></linearGradient></defs>
+                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path>
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line><line x1="8" y1="22" x2="16" y2="22"></line>
+                  <path d="M16 5.5c2 1 3 3 3 5.5" stroke="rgba(251,191,36,0.5)" strokeWidth="1" strokeDasharray="2 2" />
+                  <path d="M20 3.5c3 2 4 5 4 8.5" stroke="rgba(251,191,36,0.3)" strokeWidth="1" strokeDasharray="2 2" />
+                </svg>
+              ), 
+              title: "RSS de Podcast", 
+              desc: "Cole o feed RSS do seu podcast e importe episódios diretamente.", 
+              badge: "⏱ Em breve", 
+              cls: "src-beta", card: "" 
+            },
           ].map((s, i) => (
             <div key={i} className={`source-card${s.card === "main" ? " main" : ""}`}>
-              <div className="src-icon">{s.icon}</div>
+              {s.icon}
               <div className="src-title">{s.title}</div>
-              <div style={{ fontSize: 13, color: "rgba(255,255,255,.5)", marginTop: 6, lineHeight: 1.6 }}>{s.desc}</div>
+              <div style={{ fontSize: 14, color: "#B8BED6", marginTop: 6, lineHeight: 1.7, flex: 1 }}>{s.desc}</div>
               <div className={`src-label ${s.cls}`}>{s.badge}</div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="animate" style={{ textAlign: "center" } as React.CSSProperties}>
-        <div className="sec-badge">Features</div>
-        <h2 className="sec-title">IA que trabalha por você</h2>
-        <p className="sec-sub">Do vídeo bruto ao clip pronto para postar.</p>
-        <div className="feats">
-          {[
-            { icon: "🤖", title: "AI Clipping", desc: "A IA analisa a transcrição e seleciona os melhores trechos automaticamente." },
-            { icon: "🎤", title: "Legendas automáticas", desc: "Whisper AI gera VTT e SRT sincronizados. Vários estilos visuais: Minimalista, Hormozi, Neon, Bold." },
-            { icon: "📱", title: "Crop 9:16", desc: "Enquadramento automático para TikTok, Reels e Shorts. Sem edição manual." },
-            { icon: "📦", title: "Share Pack", desc: "Cada clip vem com legenda curta/longa, 3 hooks e 10 hashtags gerados por IA." },
-            { icon: "📥", title: "Export em lote", desc: "Baixe todos os clips de uma vez com VTT e SRT inclusos." },
-            { icon: "🗓️", title: "Agendamento", desc: "Publique ou agende direto para YouTube Shorts. Instagram/TikTok em breve." },
-          ].map((f, i) => (
-            <div key={i} className="feat">
-              <div className="feat-icon">{f.icon}</div>
-              <h3>{f.title}</h3>
-              <p>{f.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section id="como" className="animate" style={{ textAlign: "center" } as React.CSSProperties}>
-        <div className="sec-badge">Como funciona</div>
-        <h2 className="sec-title">3 passos. Resultado imediato.</h2>
-        <p className="sec-sub">Sem edição. Sem complicação.</p>
-        <div className="steps">
-          {[
-            { n: "1", icon: "📤", t: "Envia o vídeo", d: "Upload do PC, link do Drive ou QR Code pelo celular. Suporta MP4, MOV, MKV e mais." },
-            { n: "2", icon: "⚙️", t: "IA processa", d: "A IA corta nos melhores momentos, adiciona legenda e gera o copy para postar." },
-            { n: "3", icon: "📥", t: "Baixa ou publica", d: "Clips prontos com legenda, VTT/SRT e Share Pack. Publique no YouTube ou baixe tudo." },
-          ].map((s, i) => (
-            <div key={i} className="step">
-              <div className="step-num">{s.n}</div>
-              <div style={{ fontSize: 28, marginBottom: 12 }}>{s.icon}</div>
-              <h3>{s.t}</h3>
-              <p>{s.d}</p>
             </div>
           ))}
         </div>
