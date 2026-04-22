@@ -223,31 +223,106 @@ export default function AppPage() {
     <>
       <style>{`
         *{box-sizing:border-box}
-        body{margin:0;background:#07070B;color:#F5F7FF;font-family:Inter,system-ui,sans-serif}
-        .page{min-height:100vh;background:radial-gradient(circle at top left,rgba(139,92,246,0.14),transparent 28%),radial-gradient(circle at top right,rgba(94,230,255,0.08),transparent 22%),linear-gradient(180deg,#0A0911 0%,#07070B 100%);padding:24px 32px 80px}
-        .wrap{max-width:1440px;margin:0 auto}
-        .logo{font-size:26px;font-weight:900;letter-spacing:2px;background:linear-gradient(90deg,#C084FC,#5EE6FF);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-        .grid{display:grid;grid-template-columns:400px 1fr;gap:24px;align-items:start}
-        .card,.results{background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02));border:1px solid rgba(255,255,255,0.08);border-radius:24px;padding:24px;backdrop-filter:blur(16px);box-shadow:0 10px 30px rgba(0,0,0,0.28),inset 0 1px 0 rgba(255,255,255,0.04)}
-        h1{margin:0 0 6px;font-size:28px;font-weight:700}
-        .sub{color:#B8BED6;font-size:14px;margin-bottom:24px;line-height:1.6}
-        .tabs{display:flex;gap:8px;margin-bottom:24px;background:rgba(255,255,255,0.04);padding:4px;border-radius:12px}
-        .tab{flex:1;text-align:center;background:transparent;border:1px solid transparent;color:#7E849B;padding:10px 0;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px;transition:180ms ease}
-        .tab:hover{color:#F5F7FF;background:rgba(255,255,255,0.04)}
-        .tab.on{background:rgba(139,92,246,0.18);border-color:rgba(139,92,246,0.38);color:#F5F7FF;box-shadow:0 4px 12px rgba(0,0,0,0.2);transform:scale(1.01)}
-        .label{display:flex;justify-content:space-between;font-size:13px;color:#B8BED6;margin:16px 0 8px;font-weight:500}
-        .label strong{color:#C084FC}
-        .btn-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-        .btn-grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-        .chip{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:#E7EAF6;border-radius:10px;padding:10px 6px;cursor:pointer;font-weight:600;font-size:13px;transition:180ms ease}
-        .chip:hover{background:rgba(255,255,255,0.07);border-color:rgba(255,255,255,0.14);transform:translateY(-1px)}
-        .chip.on{background:rgba(139,92,246,0.18);border-color:rgba(139,92,246,0.45);color:#F5F7FF;box-shadow:0 0 12px rgba(139,92,246,0.15)}
-        .submit{width:100%;margin-top:24px;background:linear-gradient(135deg,#8B5CF6 0%,#6D5EF8 55%,#A855F7 100%);color:white;font-size:16px;font-weight:600;letter-spacing:0.01em;padding:16px;border:1px solid rgba(255,255,255,0.12);border-radius:16px;cursor:pointer;transition:all 180ms cubic-bezier(0.22, 1, 0.36, 1);box-shadow:0 8px 24px rgba(139,92,246,0.28),inset 0 1px 0 rgba(255,255,255,0.18)}
-        .submit:hover{transform:translateY(-2px);background:linear-gradient(135deg,#9F67FF 0%,#7C6BFF 55%,#C084FC 100%);box-shadow:0 12px 28px rgba(139,92,246,0.35),inset 0 1px 0 rgba(255,255,255,0.18)}
-        .submit:disabled{opacity:0.5;cursor:not-allowed;transform:none;box-shadow:none}
-        .drop-zone{border:1px dashed rgba(139,92,246,0.30);border-radius:14px;padding:36px 20px;text-align:center;cursor:pointer;background:radial-gradient(circle at top,rgba(139,92,246,0.08),transparent 60%),rgba(255,255,255,0.02);transition:all 180ms ease}
-        .drop-zone:hover,.drop-zone.drag{border-color:rgba(94,230,255,0.58);box-shadow:0 0 0 4px rgba(94,230,255,0.08),0 16px 40px rgba(94,230,255,0.10);transform:translateY(-1px)}
-        .file-box{display:flex;align-items:center;justify-content:space-between;padding:14px;border-radius:12px;background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.3);margin-top:16px}
+        body{margin:0;background:#05050A;color:#F5F7FF;font-family:Inter,system-ui,sans-serif}
+        .page{min-height:100vh;background:radial-gradient(circle at top left,rgba(139,92,246,0.08),transparent 30%),radial-gradient(circle at bottom right,rgba(94,230,255,0.05),transparent 30%),#05050A;padding:24px 32px 80px}
+        .wrap{max-width:1600px;margin:0 auto}
+        .logo{font-size:20px;font-weight:900;letter-spacing:1px;color:#fff}
+        .saas-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:32px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);padding:16px 24px;border-radius:16px;backdrop-filter:blur(20px)}
+        .stepper{display:flex;align-items:center;gap:16px;color:rgba(255,255,255,.4);font-size:13px;font-weight:600}
+        .step{display:flex;align-items:center;gap:8px}
+        .step.active{color:#fff}
+        .step.done{color:rgba(255,255,255,.6)}
+        .step-num{width:20px;height:20px;border-radius:50%;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:11px}
+        .step.active .step-num{background:#8B5CF6;color:#fff;box-shadow:0 0 10px rgba(139,92,246,0.5)}
+        .step.done .step-num{background:#4ade80;color:#000}
+        .step-line{width:32px;height:1px;background:rgba(255,255,255,.1)}
+        .step.done + .step-line{background:linear-gradient(90deg,#4ade80,rgba(255,255,255,.1))}
+        .top-actions{display:flex;gap:12px}
+        .btn-back{background:transparent;border:1px solid rgba(255,255,255,.1);color:#fff;padding:8px 16px;border-radius:8px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:6px;transition:.2s}
+        .btn-back:hover{background:rgba(255,255,255,.05)}
+        .btn-next{background:#8B5CF6;border:none;color:#fff;padding:8px 20px;border-radius:8px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:6px;transition:.2s}
+        .btn-next:hover{background:#9F67FF;box-shadow:0 0 16px rgba(139,92,246,.4)}
+        .btn-next:disabled{opacity:0.5;cursor:not-allowed;box-shadow:none}
+
+        .grid-3{display:grid;grid-template-columns:300px 1fr 320px;gap:24px;align-items:start}
+
+        .panel{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);border-radius:24px;padding:24px;backdrop-filter:blur(20px)}
+        .panel-title{font-size:18px;font-weight:700;margin:0 0 8px;color:#fff}
+        .panel-sub{font-size:13px;color:#B8BED6;line-height:1.5;margin-bottom:20px}
+
+        .up-btn{width:100%;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px;display:flex;align-items:center;gap:12px;color:#fff;font-size:14px;font-weight:600;cursor:pointer;transition:.2s;margin-bottom:12px}
+        .up-btn:hover{background:rgba(255,255,255,.06);border-color:rgba(139,92,246,.3)}
+        .up-btn.active{background:rgba(139,92,246,.1);border-color:#8B5CF6;box-shadow:0 0 16px rgba(139,92,246,.15)}
+        .up-icon{font-size:20px}
+
+        .file-card{background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.2);border-radius:12px;padding:16px;margin-top:24px;position:relative}
+        .file-card-close{position:absolute;top:12px;right:12px;background:none;border:none;color:rgba(255,255,255,.4);cursor:pointer}
+        .file-name{font-size:13px;font-weight:600;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:20px}
+        .file-meta{font-size:11px;color:rgba(255,255,255,.5)}
+        .prog-bar-bg{height:6px;background:rgba(0,0,0,.3);border-radius:3px;margin:12px 0 8px;overflow:hidden}
+        .prog-bar-fill{height:100%;background:linear-gradient(90deg,#8B5CF6,#5EE6FF);transition:width .3s}
+        .prog-stats{display:flex;justify-content:space-between;font-size:11px;color:rgba(255,255,255,.5)}
+
+        .tip-card{background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);border-radius:12px;padding:16px;margin-top:16px;display:flex;gap:12px;align-items:flex-start}
+        .tip-icon{color:#C084FC;font-size:18px}
+        .tip-text{font-size:12px;color:rgba(255,255,255,.6);line-height:1.5}
+        .tip-text h4{margin:0 0 4px;color:#fff}
+
+        .center-hero{text-align:center;padding:20px;position:relative}
+        .hero-badge{position:absolute;top:0;right:0;background:rgba(139,92,246,.15);color:#c4a0ff;padding:4px 12px;border-radius:100px;font-size:11px;font-weight:600;border:1px solid rgba(139,92,246,.3)}
+        .hero-title{font-size:24px;font-weight:700;margin:0 0 8px;display:flex;align-items:center;justify-content:flex-start;gap:12px}
+        .hero-sub{font-size:14px;color:rgba(255,255,255,.5);margin-bottom:40px;text-align:left}
+
+        .orbital{position:relative;width:240px;height:240px;margin:0 auto 40px;display:flex;align-items:center;justify-content:center}
+        .orbital-ring{position:absolute;inset:-10px;border:1px solid rgba(139,92,246,.2);border-radius:50%;animation:spin 10s linear infinite}
+        .orbital-ring-2{position:absolute;inset:-30px;border:1px dashed rgba(94,230,255,.2);border-radius:50%;animation:spin-reverse 15s linear infinite}
+        .orbital-ring-3{position:absolute;inset:-50px;border:1px solid rgba(139,92,246,.1);border-radius:50%;animation:spin 25s linear infinite}
+        .orbital-core{width:110px;height:110px;background:linear-gradient(135deg,rgba(139,92,246,.2),rgba(94,230,255,.1));border:2px solid rgba(139,92,246,.5);border-radius:28px;box-shadow:0 0 40px rgba(139,92,246,.3),inset 0 0 20px rgba(139,92,246,.2);display:flex;align-items:center;justify-content:center;font-size:48px;z-index:2}
+        .chip-float{position:absolute;background:rgba(20,20,28,.8);border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(4px);padding:8px 14px;border-radius:100px;font-size:12px;font-weight:600;color:#fff;white-space:nowrap;display:flex;align-items:center;gap:8px;box-shadow:0 4px 12px rgba(0,0,0,.5);z-index:3}
+
+        .big-prog-wrap{display:flex;align-items:center;gap:20px;margin-bottom:40px}
+        .big-prog-num{font-size:36px;font-weight:800;color:#8B5CF6}
+        .big-prog-bar{flex:1;height:8px;background:rgba(255,255,255,.05);border-radius:4px;overflow:hidden;position:relative}
+        .big-prog-fill{height:100%;background:linear-gradient(90deg,#8B5CF6,#5EE6FF);border-radius:4px;position:relative;transition:width 0.5s}
+        .big-prog-fill::after{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent);animation:shimmer 2s infinite}
+        .big-prog-text{font-size:13px;color:rgba(255,255,255,.4);margin-top:12px;display:flex;justify-content:space-between}
+
+        .metrics-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:40px}
+        .metric-box{background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);border-radius:16px;padding:16px;display:flex;align-items:center;gap:12px}
+        .metric-icon{width:40px;height:40px;border-radius:10px;background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+        .metric-val{font-size:18px;font-weight:800;margin-bottom:2px;color:#fff}
+        .metric-lbl{font-size:11px;color:rgba(255,255,255,.5);line-height:1.2}
+
+        .steps-flow{background:rgba(255,255,255,.02);border-radius:16px;padding:24px;margin-bottom:24px}
+        .steps-title{font-size:13px;font-weight:600;margin-bottom:20px;color:#fff}
+        .steps-row{display:flex;align-items:center;justify-content:space-between}
+        .step-item{display:flex;align-items:center;gap:12px;flex:1}
+        .step-item-icon{width:36px;height:36px;border-radius:50%;background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.3);display:flex;align-items:center;justify-content:center;color:#C084FC}
+        .step-item-text h4{margin:0 0 4px;font-size:13px;font-weight:600;color:#fff}
+        .step-item-text p{margin:0;font-size:11px;color:rgba(255,255,255,.4);line-height:1.4}
+        .step-arrow{color:rgba(255,255,255,.1);font-size:20px;margin:0 12px}
+
+        .footer-card{background:linear-gradient(90deg,rgba(139,92,246,.05),rgba(94,230,255,.05));border:1px solid rgba(139,92,246,.2);border-radius:16px;padding:20px;text-align:center;display:flex;align-items:center;justify-content:center;gap:12px}
+        .footer-card p{margin:0;color:#c4a0ff;font-size:14px;font-weight:600}
+        .footer-card span{color:rgba(255,255,255,.5);font-size:12px;font-weight:400}
+
+        .benefit-list{display:flex;flex-direction:column;gap:20px;margin-bottom:32px}
+        .benefit-item{display:flex;gap:16px;align-items:center}
+        .benefit-icon{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+        .benefit-text h4{margin:0 0 4px;font-size:14px;font-weight:600;color:#fff}
+        .benefit-text p{margin:0;font-size:12px;color:rgba(255,255,255,.5);line-height:1.4}
+
+        .social-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:32px}
+        .social-icon{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.05);border-radius:12px;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:24px;transition:.2s}
+        .social-icon:hover{background:rgba(255,255,255,.08);transform:translateY(-2px)}
+
+        .cta-card{background:radial-gradient(circle at top right,rgba(139,92,246,.2),transparent),rgba(20,20,28,.8);border:1px solid rgba(139,92,246,.3);border-radius:16px;padding:24px;text-align:center;margin-bottom:16px;box-shadow:0 10px 30px rgba(139,92,246,.15)}
+        .cta-btn{width:100%;background:#8B5CF6;color:#fff;border:none;border-radius:8px;padding:12px;font-size:14px;font-weight:600;margin-top:16px;cursor:pointer;transition:.2s;display:flex;align-items:center;justify-content:center;gap:8px}
+        .cta-btn:hover{background:#9F67FF;box-shadow:0 0 16px rgba(139,92,246,.3)}
+
+        .secure-card{background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);border-radius:12px;padding:16px;display:flex;gap:12px;align-items:flex-start}
+
+        /* OVERRIDES DAS MODAIS/CONFIGURACOES ORIGINAIS */
         input[type=url],input[type=text],input[type=email]{width:100%;margin-top:12px;padding:14px;border-radius:10px;border:1px solid rgba(255,255,255,0.08);background:rgba(17,17,26,0.6);color:#fff;font-size:15px;outline:none;transition:180ms ease}
         input[type=url]:focus,input[type=text]:focus,input[type=email]:focus{box-shadow:0 0 0 3px rgba(139,92,246,0.20),0 0 0 6px rgba(94,230,255,0.08);border-color:rgba(139,92,246,0.45)}
         .qr-box{text-align:center;padding:20px 0}
@@ -257,7 +332,6 @@ export default function AppPage() {
         .err-detail{font-family:monospace;font-size:11px;color:rgba(255,255,255,.5);white-space:pre-wrap;word-break:break-word;max-height:200px;overflow:auto}
         .fallback{margin-top:16px;background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.25);border-radius:12px;padding:16px}
         .player{background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02));border:1px solid rgba(255,255,255,0.08);border-radius:24px;overflow:hidden;margin-bottom:24px;box-shadow:0 18px 60px rgba(0,0,0,0.35),inset 0 0 0 1px rgba(255,255,255,0.02);transition:all 180ms cubic-bezier(0.22, 1, 0.36, 1)}
-        .player:hover{transform:translateY(-3px);border-color:rgba(139,92,246,0.24);box-shadow:0 24px 70px rgba(0,0,0,0.42),0 0 30px rgba(139,92,246,0.12)}
         .player-top{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;font-size:14px;border-bottom:1px solid rgba(255,255,255,.04);background:rgba(255,255,255,.01)}
         .video-wrapper{position:relative;width:100%;display:flex;justify-content:center;background:#030305;padding:20px 0}
         .video-blur-bg{position:absolute;top:0;left:0;right:0;bottom:0;opacity:0.4;filter:blur(40px);z-index:0;pointer-events:none}
@@ -266,191 +340,183 @@ export default function AppPage() {
         .share-title{font-size:11px;font-weight:700;color:#5EE6FF;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px}
         .share-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
         .share-btn{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:10px 6px;font-size:12px;font-weight:600;cursor:pointer;color:#F5F7FF;text-align:center;transition:180ms ease}
-        .share-btn:hover{background:rgba(255,255,255,0.07);border-color:rgba(255,255,255,0.14);transform:translateY(-1px)}
         .dl{text-decoration:none;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:#F5F7FF;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;transition:180ms ease}
-        .dl:hover{background:rgba(255,255,255,0.07);border-color:rgba(255,255,255,0.14)}
         .clip-list{display:flex;flex-direction:column;gap:8px}
         .clip-item{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);cursor:pointer;transition:180ms ease}
-        .clip-item:hover{background:rgba(255,255,255,.05);transform:translateY(-1px)}
         .clip-item.on{background:rgba(139,92,246,.14);border-color:#8B5CF6;box-shadow:0 0 10px rgba(139,92,246,0.1)}
         .style-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:8px}
         .style-card{border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);border-radius:10px;padding:10px 6px;cursor:pointer;text-align:center;transition:180ms ease}
-        .style-card:hover{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.14)}
         .style-card.on{border-color:#8B5CF6;background:rgba(139,92,246,.15);box-shadow:0 0 12px rgba(139,92,246,0.15)}
         .style-preview{font-size:11px;font-weight:700;height:22px;display:flex;align-items:center;justify-content:center;border-radius:4px;margin-bottom:6px}
         .style-name{font-size:10px;color:#7E849B}
         .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(139,92,246,.95);color:#fff;padding:12px 24px;border-radius:100px;font-size:14px;font-weight:600;z-index:999;pointer-events:none;animation:fadeup .3s ease;box-shadow:0 10px 30px rgba(139,92,246,0.3)}
         .pub-btn{text-decoration:none;background:linear-gradient(135deg,#C084FC,#8B5CF6);color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;border:none;cursor:pointer;transition:180ms ease}
-        .pub-btn:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(192,132,252,0.3)}
         .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(3,3,8,0.68);backdrop-filter:blur(10px);z-index:999;display:flex;align-items:center;justify-content:center;animation:fadein .3s ease}
         .modal{background:radial-gradient(circle at top,rgba(139,92,246,0.16),transparent 35%),linear-gradient(180deg,rgba(24,24,38,0.95),rgba(12,12,20,0.95));border:1px solid rgba(255,255,255,0.10);border-radius:28px;padding:36px;width:90%;max-width:520px;text-align:center;box-shadow:0 30px 120px rgba(0,0,0,0.55),0 0 40px rgba(139,92,246,0.12);position:relative}
         .modal-close{position:absolute;top:20px;right:20px;background:none;border:none;color:#B8BED6;font-size:24px;cursor:pointer;transition:180ms ease}
-        .modal-close:hover{color:#F5F7FF;transform:scale(1.1)}
+        .chip{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:#E7EAF6;border-radius:10px;padding:10px 6px;cursor:pointer;font-weight:600;font-size:13px;transition:180ms ease}
+        .chip.on{background:rgba(139,92,246,0.18);border-color:rgba(139,92,246,0.45);color:#F5F7FF;box-shadow:0 0 12px rgba(139,92,246,0.15)}
         .adv-panel{border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);border-radius:16px;margin:24px 0 0;overflow:hidden;transition:all 240ms cubic-bezier(0.22, 1, 0.36, 1)}
         .adv-btn{width:100%;padding:16px 20px;background:none;border:none;color:#F5F7FF;font-size:14px;font-weight:600;display:flex;justify-content:space-between;cursor:pointer;transition:180ms ease}
-        .adv-btn:hover{background:rgba(255,255,255,0.04)}
         .adv-content{padding:0 20px;max-height:0;overflow:hidden;transition:max-height 240ms cubic-bezier(0.22, 1, 0.36, 1), padding 240ms ease; opacity:0}
         .adv-content.open{max-height:500px;padding:0 20px 20px; opacity:1}
-        .saas-top{display:flex;justify-content:space-between;align-items:center;padding:0 24px;height:72px;background:rgba(17,17,26,0.72);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,0.08);border-radius:18px;margin-bottom:32px;box-shadow:0 8px 30px rgba(0,0,0,0.32),inset 0 1px 0 rgba(255,255,255,0.04)}
-        .shimmer-bar{background:linear-gradient(90deg,rgba(255,255,255,0.03) 0%,rgba(255,255,255,0.08) 50%,rgba(255,255,255,0.03) 100%);background-size:200% 100%;animation:shimmer 1.8s linear infinite;height:4px;border-radius:4px;margin-top:12px}
+        .label{display:flex;justify-content:space-between;font-size:13px;color:#B8BED6;margin:16px 0 8px;font-weight:500}
+        .btn-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+        .btn-grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
         @keyframes fadein{from{opacity:0}to{opacity:1}}
         @keyframes fadeup{from{opacity:0;transform:translateX(-50%) translateY(8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
-        @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
-        @media(max-width:900px){.grid{grid-template-columns:1fr}.style-grid{grid-template-columns:repeat(3,1fr)}.share-grid{grid-template-columns:1fr 1fr}}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        @keyframes spin-reverse{to{transform:rotate(-360deg)}}
+        @keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+        @media(max-width:1100px){.grid-3{grid-template-columns:1fr}.center-hero{margin-top:24px}.saas-top{flex-direction:column;gap:16px}}
       `}</style>
       {copyToast && <div className="toast">{copyToast}</div>}
       <div className="page"><div className="wrap">
         <div className="saas-top">
-          <div className="logo" style={{fontSize:22}}>KLIPORA</div>
-          <div style={{display:"flex",gap:16,alignItems:"center"}}>
-            <a href="/" style={{color:"rgba(255,255,255,.6)",textDecoration:"none",fontSize:14,fontWeight:600}}>← Voltar</a>
-            
-            {userPlan === "pro" ? (
-              <div style={{background:"rgba(192,38,211,.15)",color:"#e040fb",padding:"6px 14px",borderRadius:100,fontSize:12,fontWeight:700,border:"1px solid rgba(192,38,211,.3)"}}>👑 KLIPORA PRO</div>
-            ) : (
-              <div style={{background:"rgba(124,58,237,.15)",color:"#c4a0ff",padding:"6px 14px",borderRadius:100,fontSize:12,fontWeight:700,border:"1px solid rgba(124,58,237,.3)"}}>⚡ Grátis (Limites)</div>
-            )}
-            
-            {currentUser ? (
-              <div style={{display:"flex",alignItems:"center",gap:8}}>
-                <div style={{fontSize:13,color:"rgba(255,255,255,.6)"}}>{currentUser.email}</div>
-                <div style={{width:34,height:34,borderRadius:"50%",background:"linear-gradient(135deg,#7c3aed,#c026d3)",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:14}}>{currentUser.email.substring(0,2).toUpperCase()}</div>
-              </div>
-            ) : (
-              <button className="chip" style={{padding:"8px 16px"}} onClick={()=>setShowLoginModal(true)}>Entrar</button>
-            )}
+          <div className="logo">KLIPORA</div>
+          
+          <div className="stepper">
+            <div className={`step ${loading || result ? "done" : "active"}`}>
+              <div className="step-num">{loading || result ? "✓" : "1"}</div> Enviar
+            </div>
+            <div className="step-line"></div>
+            <div className={`step ${loading ? "active" : result ? "done" : ""}`}>
+              <div className="step-num">{result ? "✓" : "2"}</div> Cortar
+            </div>
+            <div className="step-line"></div>
+            <div className={`step ${result ? "active" : ""}`}>
+              <div className="step-num">3</div> Personalizar
+            </div>
+            <div className="step-line"></div>
+            <div className="step">
+              <div className="step-num">4</div> Publicar
+            </div>
+          </div>
+
+          <div className="top-actions">
+            <a href="/" className="btn-back">← Voltar</a>
+            <button className="btn-next" onClick={handleSubmit} disabled={loading||!canSubmit}>
+              Próximo →
+            </button>
           </div>
         </div>
-        <div className="grid">
-          <div className="card">
-            <h1>Gerar clips</h1>
-            <p className="sub">Suba o vídeo, cole o link ou escaneie o QR com seu celular.</p>
-            <div className="tabs">
-              {[["upload","📁 Upload PC"],["link","🔗 Link Direto"],["qr","📱 QR Celular"]].map(([id,label])=>(
-                <button key={id} className={`tab${tab===id?" on":""}`} onClick={()=>setTab(id as "upload"|"link"|"qr")} disabled={loading}>{label}</button>
-              ))}
-            </div>
-
-            <input ref={fileRef} type="file" accept="video/*,audio/*" style={{display:"none"}} onChange={e=>{const f=e.target.files?.[0];if(f){setFile(f);setResult(null);}}} />
-
-            {tab==="upload" && (!file ? (
-              <div className={`drop-zone${isDragging?" drag":""}`} onClick={()=>fileRef.current?.click()}
-                onDragOver={e=>{e.preventDefault();setIsDragging(true);}} onDragLeave={()=>setIsDragging(false)}
-                onDrop={e=>{e.preventDefault();setIsDragging(false);const f=e.dataTransfer.files?.[0];if(f){setFile(f);setResult(null);}}}>
-                <div style={{fontSize:36}}>🎬</div>
-                <div style={{fontWeight:600,margin:"10px 0 6px"}}>Arraste o vídeo ou clique para selecionar</div>
-                <div style={{color:"rgba(255,255,255,.4)",fontSize:13}}>MP4 · MOV · MKV · AVI · WebM · MP3</div>
-              </div>
-            ) : (
-              <div className="file-box">
-                <div>
-                  <div style={{fontWeight:600,fontSize:14}}>{file.name}</div>
-                  <div style={{fontSize:12,color:"rgba(255,255,255,.4)",marginTop:4}}>{fmtKB(Math.round(file.size/1024))}</div>
-                </div>
-                <button className="chip" onClick={()=>setFile(null)}>Trocar</button>
-              </div>
-            ))}
-
-            {tab==="link" && (
-              <>
-                <input type="url" placeholder="https://drive.google.com/... ou link direto de vídeo" value={linkUrl} onChange={e=>setLinkUrl(e.target.value)} />
-                <div style={{fontSize:12,color:"rgba(255,255,255,.3)",marginTop:8}}>✅ Google Drive · Dropbox · Links diretos MP4</div>
-              </>
-            )}
-
-            {tab==="qr" && (
-              <div className="qr-box">
-                {qrStatus!=="done" && (
-                  <button className="submit" style={{width:"100%",padding:14,fontSize:15}} onClick={generateQr}>📱 Gerar QR Code do Celular</button>
-                )}
-                {qrStatus==="done" && (
-                  <div style={{color:"#4ade80",fontWeight:700,fontSize:15}}>✅ Vídeo recebido via celular! Pode gerar os clips.</div>
-                )}
-              </div>
-            )}
-
-            <div className="adv-panel">
-              <button className="adv-btn" onClick={()=>setShowSettings(!showSettings)}>
-                <span style={{display:"flex",alignItems:"center",gap:8}}>⚙️ Configurações Avançadas</span>
-                <span style={{transform:showSettings?"rotate(180deg)":"none",transition:".3s"}}>▼</span>
+        <div className="grid-3">
+          {/* COLUNA 1 - ADICIONAR VÍDEO */}
+          <div className="col-left">
+            <div className="panel">
+              <h2 className="panel-title">Adicionar vídeo</h2>
+              <p className="panel-sub">Envie um vídeo, cole o link ou escaneie o QR com seu celular.</p>
+              
+              <button className={`up-btn${tab==="upload"?" active":""}`} onClick={()=>setTab("upload")} disabled={loading}>
+                <span className="up-icon">↑</span> Upload do PC
               </button>
-              <div className={`adv-content${showSettings?" open":""}`}>
-                <div className="label" style={{marginTop:8}}><span>Formato</span><strong>{format==="9:16"?"9:16 Vertical":"Original"}</strong></div>
-                <div className="btn-grid-2">
-                  {[["original","📺 Original"],["9:16","📱 9:16"]].map(([v,l])=>(
-                    <button key={v} className={`chip${format===v?" on":""}`} onClick={()=>setFormat(v)} disabled={loading}>{l}</button>
-                  ))}
+              <button className={`up-btn${tab==="link"?" active":""}`} onClick={()=>setTab("link")} disabled={loading}>
+                <span className="up-icon">🔗</span> Link direto
+              </button>
+              <button className={`up-btn${tab==="qr"?" active":""}`} onClick={()=>setTab("qr")} disabled={loading}>
+                <span className="up-icon">📱</span> QR do celular
+              </button>
+
+              <input ref={fileRef} type="file" accept="video/*,audio/*" style={{display:"none"}} onChange={e=>{const f=e.target.files?.[0];if(f){setFile(f);setResult(null);}}} />
+              
+              {tab==="upload" && (
+                !file ? (
+                  <div className={`drop-zone${isDragging?" drag":""}`} style={{marginTop:16}} onClick={()=>fileRef.current?.click()} onDragOver={e=>{e.preventDefault();setIsDragging(true);}} onDragLeave={()=>setIsDragging(false)} onDrop={e=>{e.preventDefault();setIsDragging(false);const f=e.dataTransfer.files?.[0];if(f){setFile(f);setResult(null);}}}>
+                    <div style={{fontSize:24}}>🎬</div>
+                    <div style={{fontWeight:600,margin:"8px 0 4px",fontSize:13}}>Arraste ou clique</div>
+                  </div>
+                ) : (
+                  <div className="file-card">
+                    <button className="file-card-close" onClick={()=>setFile(null)}>✕</button>
+                    <div className="file-name">{file.name}</div>
+                    <div className="file-meta">{fmtKB(Math.round(file.size/1024))}</div>
+                    {loading && progress >= 0 && (
+                      <>
+                        <div className="prog-bar-bg"><div className="prog-bar-fill" style={{width:`${Math.max(10, progress*25)}%`}}></div></div>
+                        <div className="prog-stats"><span>Enviando vídeo...</span><span>{Math.max(10, progress*25)}%</span></div>
+                      </>
+                    )}
+                  </div>
+                )
+              )}
+
+              {tab==="link" && (
+                <div style={{marginTop:16}}>
+                  <input type="url" placeholder="https://drive.google.com/..." value={linkUrl} onChange={e=>setLinkUrl(e.target.value)} disabled={loading} />
+                  <div style={{fontSize:11,color:"rgba(255,255,255,.3)",marginTop:8}}>✅ Google Drive · Dropbox · Links MP4</div>
                 </div>
+              )}
 
-                <div className="label"><span>Resolução</span><strong>{resolution==="1080p"?"1080p Full HD":"720p HD"}</strong></div>
-                <div className="btn-grid-2">
-                  <button className={`chip${resolution==="720p"?" on":""}`} onClick={()=>setResolution("720p")} disabled={loading}>720p HD</button>
-                  <button className={`chip${resolution==="1080p"?" on":""}`} onClick={()=>handleProFeature(()=>setResolution("1080p"))} disabled={loading} style={{position:"relative"}}>
-                    1080p Full HD <span style={{position:"absolute",top:-6,right:-6,background:"linear-gradient(135deg,#C084FC,#8B5CF6)",fontSize:9,padding:"2px 6px",borderRadius:4,fontWeight:900,color:"#fff",boxShadow:"0 2px 8px rgba(192,132,252,0.4)"}}>PRO</span>
-                  </button>
+              {tab==="qr" && (
+                <div className="qr-box">
+                  {qrStatus!=="done" ? (
+                    <button className="up-btn active" style={{justifyContent:"center",marginTop:16}} onClick={generateQr} disabled={loading}>Gerar QR Code</button>
+                  ) : (
+                    <div style={{color:"#4ade80",fontWeight:700,fontSize:13,marginTop:16}}>✅ Vídeo recebido via celular!</div>
+                  )}
                 </div>
+              )}
 
-                <div className="label"><span>Duração do clip</span><strong>{fmtD(duration)}</strong></div>
-                <div className="btn-grid-4">
-                  {DURATIONS.map(d=>(
-                    <button key={d} className={`chip${duration===d?" on":""}`} onClick={()=>setDuration(d)} disabled={loading}>{fmtD(d)}</button>
-                  ))}
-                </div>
-
-                <div className="label"><span>Estilo de legenda</span><strong>{STYLES.find(s=>s.id===subtitleStyle)?.label}</strong></div>
-                <div className="style-grid">
-                  {STYLES.map(s=>(
-                    <div key={s.id} className={`style-card${subtitleStyle===s.id?" on":""}`} onClick={()=>s.pro?handleProFeature(()=>setSubtitleStyle(s.id)):setSubtitleStyle(s.id)} style={{position:"relative"}}>
-                      {s.pro && <span style={{position:"absolute",top:-6,right:-6,background:"#c026d3",fontSize:9,padding:"2px 6px",borderRadius:4,fontWeight:900,color:"#fff",zIndex:10}}>PRO</span>}
-                      <div className="style-preview" style={s.preview as React.CSSProperties}>Abc</div>
-                      <div className="style-name">{s.label}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {loading && progress >= 0 && (
-              <div style={{display:"flex",flexDirection:"column",gap:12,margin:"24px 0",background:"rgba(139,92,246,.08)",padding:"20px",borderRadius:16,border:"1px solid rgba(139,92,246,.2)",boxShadow:"0 10px 30px rgba(0,0,0,0.2)"}}>
-                <div style={{display:"flex",justifyContent:"space-between"}}>
-                  {[{i:"🔍",t:"Analisar"},{i:"✂️",t:"Cortar"},{i:"📝",t:"Legendar"},{i:"📦",t:"Finalizar"}].map((s,i)=>(
-                    <div key={i} style={{display:"flex",alignItems:"center",gap:6,fontSize:13,color:i<progress?"#4ade80":i===progress?"#C084FC":"#7E849B",fontWeight:700}}>
-                      {i<progress?"✅":i===progress?"⏳":s.i} <span className="prog-text">{s.t}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="shimmer-bar"></div>
-              </div>
-            )}
-
-            <button className="submit" onClick={handleSubmit} disabled={loading||!canSubmit}>
-              {loading ? "Processando..." : "⚡ Gerar clips"}
-            </button>
-
-            {result && !result.success && (
-              <div className="err">
-                <div className="err-title">✗ {result.error}</div>
-                {result.detail && <div className="err-detail">{result.detail}</div>}
-                <div className="fallback" style={{marginTop:12}}>
-                  <div style={{fontWeight:700,marginBottom:8,fontSize:13}}>💡 Alternativas:</div>
-                  <div style={{fontSize:13,color:"rgba(255,255,255,.6)",lineHeight:1.8}}>
-                    📁 Faça upload do arquivo diretamente<br/>
-                    🔗 Use um link do Google Drive ou Dropbox<br/>
-                    📱 Escaneie o QR com o celular
+              <div className="adv-panel">
+                <button className="adv-btn" onClick={()=>setShowSettings(!showSettings)}>
+                  <span style={{display:"flex",alignItems:"center",gap:8}}>⚙️ Opções Avançadas</span>
+                  <span style={{transform:showSettings?"rotate(180deg)":"none",transition:".3s"}}>▼</span>
+                </button>
+                <div className={`adv-content${showSettings?" open":""}`}>
+                  <div className="label" style={{marginTop:8}}><span>Formato</span><strong>{format==="9:16"?"9:16":"Original"}</strong></div>
+                  <div className="btn-grid-2">
+                    {[["original","📺 Original"],["9:16","📱 9:16"]].map(([v,l])=>(
+                      <button key={v} className={`chip${format===v?" on":""}`} onClick={()=>setFormat(v)} disabled={loading}>{l}</button>
+                    ))}
+                  </div>
+                  <div className="label"><span>Duração</span><strong>{fmtD(duration)}</strong></div>
+                  <div className="btn-grid-4">
+                    {DURATIONS.map(d=>(
+                      <button key={d} className={`chip${duration===d?" on":""}`} onClick={()=>setDuration(d)} disabled={loading}>{fmtD(d)}</button>
+                    ))}
+                  </div>
+                  <div className="label"><span>Estilos VIP</span><strong>{STYLES.find(s=>s.id===subtitleStyle)?.label}</strong></div>
+                  <div className="style-grid" style={{gridTemplateColumns:"repeat(3, 1fr)"}}>
+                    {STYLES.map(s=>(
+                      <div key={s.id} className={`style-card${subtitleStyle===s.id?" on":""}`} onClick={()=>s.pro?handleProFeature(()=>setSubtitleStyle(s.id)):setSubtitleStyle(s.id)} style={{position:"relative"}}>
+                        <div className="style-preview" style={s.preview as React.CSSProperties}>Abc</div>
+                        <div className="style-name">{s.label}</div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
-            )}
+
+              {result && !result.success && (
+                <div className="err">
+                  <div className="err-title">✗ {result.error}</div>
+                  {result.detail && <div className="err-detail">{result.detail}</div>}
+                </div>
+              )}
+            </div>
+            
+            <div className="tip-card">
+              <div className="tip-icon">✨</div>
+              <div className="tip-text">
+                <h4>Dica</h4>
+                Vídeos com boa iluminação e áudio claro geram melhores resultados.
+              </div>
+            </div>
+            
+            <div className="tip-card" style={{borderColor:"rgba(139,92,246,.2)"}}>
+              <div className="tip-icon" style={{color:"#fff",background:"rgba(139,92,246,.2)",width:24,height:24,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>?</div>
+              <div className="tip-text" style={{width:"100%"}}>
+                <h4 style={{color:"#c4a0ff"}}>Precisa de ajuda?</h4>
+                <p style={{marginBottom:12}}>Veja nosso guia rápido de como gerar os melhores clips.</p>
+                <button style={{background:"rgba(139,92,246,.2)",border:"none",color:"#c4a0ff",padding:"6px 12px",borderRadius:6,fontSize:11,fontWeight:700,cursor:"pointer",width:"100%"}}>Ver guia rápido →</button>
+              </div>
+            </div>
           </div>
 
-          <div className="results">
-            <h2 style={{margin:"0 0 6px"}}>Resultados</h2>
-            <div style={{color:"rgba(255,255,255,.4)",fontSize:13,marginBottom:16}}>
-              {result?.success ? `${result.totalClips} clips · ${fmtD(result.clipDuration??30)} cada · ${result.totalSeconds}s total` : "Seus clips aparecem aqui."}
-            </div>
-
+          {/* COLUNA 2 - CENTRAL */}
+          <div className="col-center">
             {result?.success && activeClip ? (
-              <>
+              <div className="panel" style={{padding:20}}>
                 <div className="player">
                   <div className="player-top">
                     <span style={{fontWeight:800,color:"#fff",fontSize:16}}>Clip {activeClip.index}</span>
@@ -471,15 +537,13 @@ export default function AppPage() {
                       <span style={{color:"rgba(255,255,255,.4)",fontSize:12,marginTop:2}}>{fmtKB(activeClip.sizeKB)}</span>
                     </div>
                     <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-                      {activeClip.captions_url && <a href={activeClip.captions_url} download style={{color:"#c4a0ff",fontSize:13,padding:"8px 14px",border:"1px solid rgba(124,58,237,.3)",background:"rgba(124,58,237,.1)",borderRadius:8,textDecoration:"none",fontWeight:600}}>VTT</a>}
-                      {activeClip.srt_url && <a href={activeClip.srt_url} download style={{color:"#c4a0ff",fontSize:13,padding:"8px 14px",border:"1px solid rgba(124,58,237,.3)",background:"rgba(124,58,237,.1)",borderRadius:8,textDecoration:"none",fontWeight:600}}>SRT</a>}
                       <button className="pub-btn" onClick={()=>setShowPubModal(activeClip)}>🚀 Publicar</button>
                       <a className="dl" href={`/api/dl?url=${encodeURIComponent(activeClip.clipUrl)}&filename=${encodeURIComponent(activeClip.clipFilename)}&dl=1`} download={activeClip.clipFilename}>⬇ Baixar Clip</a>
                     </div>
                   </div>
 
                   {activeClip.copy && (activeClip.copy.legendas?.curta || activeClip.copy.hooks?.length > 0) && (
-                    <div className="share-pack">
+                    <div className="share-pack" style={{padding:20}}>
                       <div className="share-title">📦 Share Pack — Copy pronta para postar</div>
                       <div className="share-grid">
                         {activeClip.copy.legendas?.curta && <button className="share-btn" onClick={()=>copy(activeClip.copy!.legendas.curta,"Legenda curta")}>📋 Legenda curta</button>}
@@ -493,6 +557,7 @@ export default function AppPage() {
                   )}
                 </div>
 
+                <h3 style={{margin:"0 0 12px",fontSize:14}}>Outros Clips Gerados</h3>
                 <div className="clip-list">
                   {result.clips?.map(clip=>(
                     <div key={clip.index} className={`clip-item${activeClip.index===clip.index?" on":""}`} onClick={()=>setActiveClip(clip)}>
@@ -515,13 +580,133 @@ export default function AppPage() {
                     </div>
                   ))}
                 </div>
-              </>
+              </div>
+            ) : loading ? (
+              <div className="panel" style={{padding:0, overflow:"hidden"}}>
+                <div className="center-hero">
+                  <div className="hero-badge">Etapa 2 de 4</div>
+                  <h2 className="hero-title"><span style={{color:"#8B5CF6"}}>✨</span> Analisando seu vídeo com IA</h2>
+                  <p className="hero-sub">Nossa IA está identificando os melhores momentos para seus clips.</p>
+
+                  <div className="orbital">
+                    <div className="orbital-ring"></div>
+                    <div className="orbital-ring-2"></div>
+                    <div className="orbital-ring-3"></div>
+                    <div className="orbital-core">✨</div>
+                    <div className="chip-float" style={{top:20,left:-30}}><span style={{color:"#f43f5e"}}>❤️</span> Engajamento</div>
+                    <div className="chip-float" style={{top:80,right:-50}}><span style={{color:"#4ade80"}}>〰️</span> Ritmo de fala</div>
+                    <div className="chip-float" style={{bottom:40,left:-10}}><span style={{color:"#3b82f6"}}>#</span> Tópicos relevantes</div>
+                    <div className="chip-float" style={{bottom:20,right:-20}}><span style={{color:"#fbbf24"}}>📈</span> Potencial viral</div>
+                  </div>
+
+                  <div className="big-prog-wrap">
+                    <div className="big-prog-num">{Math.max(10, progress*25)}%</div>
+                    <div style={{flex:1}}>
+                        <div className="big-prog-bar"><div className="big-prog-fill" style={{width:`${Math.max(10, progress*25)}%`}}></div></div>
+                        <div className="big-prog-text"><span>Analisando seu vídeo...</span><span>Isso pode levar alguns minutos</span></div>
+                    </div>
+                  </div>
+
+                  <div className="metrics-row">
+                    <div className="metric-box">
+                        <div className="metric-icon" style={{color:"#C084FC",background:"rgba(192,132,252,.1)"}}>🎬</div>
+                        <div><div className="metric-val">~8</div><div className="metric-lbl">Momentos identificados</div></div>
+                    </div>
+                    <div className="metric-box">
+                        <div className="metric-icon" style={{color:"#60a5fa",background:"rgba(96,165,250,.1)"}}>⏱</div>
+                        <div><div className="metric-val">02:45</div><div className="metric-lbl">Duração total extraída</div></div>
+                    </div>
+                    <div className="metric-box">
+                        <div className="metric-icon" style={{color:"#4ade80",background:"rgba(74,222,128,.1)"}}>✓</div>
+                        <div><div className="metric-val">98%</div><div className="metric-lbl">Confiança da IA</div></div>
+                    </div>
+                    <div className="metric-box">
+                        <div className="metric-icon" style={{color:"#fbbf24",background:"rgba(251,191,36,.1)"}}>📈</div>
+                        <div><div className="metric-val">Alto</div><div className="metric-lbl">Potencial viral</div></div>
+                    </div>
+                  </div>
+
+                  <div className="steps-flow">
+                    <div className="steps-title">O que acontece agora?</div>
+                    <div className="steps-row">
+                        <div className="step-item">
+                          <div className="step-item-icon">🎯</div>
+                          <div className="step-item-text"><h4>1. Analisamos</h4><p>IA identifica os momentos.</p></div>
+                        </div>
+                        <div className="step-arrow">→</div>
+                        <div className="step-item">
+                          <div className="step-item-icon" style={{background:"rgba(255,255,255,.05)",color:"#fff",borderColor:"rgba(255,255,255,.1)"}}>✏️</div>
+                          <div className="step-item-text"><h4>2. Selecionamos</h4><p>Geramos legendas e edição.</p></div>
+                        </div>
+                        <div className="step-arrow">→</div>
+                        <div className="step-item">
+                          <div className="step-item-icon" style={{background:"rgba(255,255,255,.05)",color:"#fff",borderColor:"rgba(255,255,255,.1)"}}>🚀</div>
+                          <div className="step-item-text"><h4>3. Publicamos</h4><p>Pronto para redes sociais.</p></div>
+                        </div>
+                    </div>
+                  </div>
+
+                  <div className="footer-card">
+                    <div style={{fontSize:20}}>⚡</div>
+                    <p>Relaxe, a IA está trabalhando para você!</p>
+                    <span>Avisaremos quando seus clips estiverem prontos.</span>
+                  </div>
+                </div>
+              </div>
             ) : (
-              <div style={{color:"rgba(255,255,255,.4)",textAlign:"center",padding:"60px 0"}}>
-                <div style={{fontSize:48,marginBottom:16}}>🎬</div>
-                <div>Envie um vídeo para gerar seus clips.</div>
+              <div className="panel" style={{height:"100%",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",textAlign:"center",padding:60}}>
+                <div style={{fontSize:60,marginBottom:24,opacity:0.8}}>✨</div>
+                <h2 style={{margin:"0 0 12px",fontSize:24}}>Aguardando vídeo</h2>
+                <p style={{color:"rgba(255,255,255,.5)",fontSize:14,maxWidth:300,lineHeight:1.6}}>Escolha uma opção de entrada na coluna à esquerda e clique em <b>Próximo</b> para iniciarmos a mágica da IA.</p>
               </div>
             )}
+          </div>
+
+          {/* COLUNA 3 - DIREITA */}
+          <div className="col-right">
+            <div className="benefit-list">
+              <h3 style={{fontSize:14,color:"#fff",margin:"0 0 4px"}}>O que você terá ao final</h3>
+              <div className="benefit-item">
+                  <div className="benefit-icon" style={{background:"rgba(139,92,246,.2)",color:"#C084FC"}}>🎬</div>
+                  <div className="benefit-text"><h4>Clips prontos</h4><p>Vários clips curtos com os melhores momentos.</p></div>
+              </div>
+              <div className="benefit-item">
+                  <div className="benefit-icon" style={{background:"rgba(74,222,128,.15)",color:"#4ade80"}}>⚙️</div>
+                  <div className="benefit-text"><h4>Personalização total</h4><p>Edite legendas, cores e estilos do seu jeito.</p></div>
+              </div>
+              <div className="benefit-item">
+                  <div className="benefit-icon" style={{background:"rgba(236,72,153,.15)",color:"#f472b6"}}>🚀</div>
+                  <div className="benefit-text"><h4>Publicação rápida</h4><p>Envie direto para TikTok e Instagram Reels.</p></div>
+              </div>
+            </div>
+
+            <h3 style={{fontSize:14,color:"#fff",margin:"0 0 16px"}}>Redes sociais suportadas</h3>
+            <div className="social-grid">
+              <div className="social-icon">🎵</div>
+              <div className="social-icon" style={{background:"linear-gradient(45deg,#f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%)",color:"#fff",borderColor:"transparent"}}>📸</div>
+              <div className="social-icon" style={{color:"#ff0000"}}>▶</div>
+              <div className="social-icon" style={{color:"#1877F2",fontWeight:900,fontSize:20}}>f</div>
+              <div className="social-icon" style={{color:"#0A66C2",fontWeight:900,fontSize:18}}>in</div>
+              <div className="social-icon" style={{color:"#fff",fontWeight:800,fontSize:20}}>𝕏</div>
+              <div className="social-icon" style={{color:"#E60023",fontWeight:800,fontSize:20}}>P</div>
+              <div className="social-icon" style={{fontSize:14,color:"rgba(255,255,255,.4)",flexDirection:"column",gap:4}}><span style={{fontSize:18}}>+</span><span style={{fontSize:8}}>Em breve</span></div>
+            </div>
+
+            <div className="cta-card">
+              <div style={{fontSize:32,marginBottom:12}}>📅</div>
+              <h3 style={{margin:"0 0 8px",fontSize:16,color:"#fff"}}>Pronto para publicar</h3>
+              <p style={{fontSize:12,color:"rgba(255,255,255,.6)",margin:0,lineHeight:1.5}}>Agende ou publique seus clips diretamente nas redes sociais com apenas 1 clique.</p>
+              <button className="cta-btn" onClick={()=>{ if(activeClip) setShowPubModal(activeClip); else alert("Aguarde a geração do clipe para publicar!") }}>Ver próximas etapas →</button>
+            </div>
+
+            <div className="secure-card">
+              <div style={{color:"#4ade80",fontSize:20}}>🛡️</div>
+              <div>
+                  <h4 style={{margin:"0 0 4px",fontSize:13,color:"#fff"}}>Seus dados estão seguros</h4>
+                  <p style={{margin:"0 0 8px",fontSize:11,color:"rgba(255,255,255,.4)",lineHeight:1.4}}>Seus vídeos são privados e protegidos com criptografia de ponta a ponta.</p>
+                  <span style={{color:"#4ade80",fontSize:10,fontWeight:700,background:"rgba(74,222,128,.1)",padding:"4px 8px",borderRadius:4}}>🔒 100% seguro</span>
+              </div>
+            </div>
           </div>
         </div>
       </div></div>
