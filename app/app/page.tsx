@@ -44,12 +44,27 @@ export default function AppPage() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [resolution, setResolution] = useState("720p");
   const [userPlan] = useState("free"); // TODO: Puxar do banco de dados/Sessão
+  const [igAccounts, setIgAccounts] = useState<any[]|null>(null);
+  const [igStatus, setIgStatus] = useState<"idle"|"publishing"|"done"|"error">("idle");
   const fileRef = useRef<HTMLInputElement>(null);
   const pollRef = useRef<NodeJS.Timeout|null>(null);
 
   const stopPoll = useCallback(() => { if (pollRef.current) clearInterval(pollRef.current); }, []);
 
-  useEffect(() => () => stopPoll(), [stopPoll]);
+  useEffect(() => {
+    // Check IG accounts
+    fetch("/api/instagram/accounts")
+      .then(r => r.json())
+      .then(d => { if(d.accounts) setIgAccounts(d.accounts); })
+      .catch(()=>{});
+      
+    // Check URL params for success/error
+    const searchParams = new URLSearchParams(window.location.search);
+    if(searchParams.get("success") === "ig_connected") setCopyToast("✅ Instagram conectado com sucesso!");
+    if(searchParams.get("error") === "auth_failed") setCopyToast("❌ Erro ao conectar Instagram.");
+      
+    return () => stopPoll();
+  }, [stopPoll]);
 
   function handleProFeature(action: () => void) {
     if (userPlan === "free") setShowUpgradeModal(true);
@@ -120,6 +135,46 @@ export default function AppPage() {
     navigator.clipboard.writeText(text);
     setCopyToast(`${label} copiado!`);
     setTimeout(() => setCopyToast(""), 2000);
+  }
+
+  async function publishToInstagram(igUserId: string) {
+    if (!showPubModal) return;
+    setIgStatus("publishing");
+    try {
+      const caption = showPubModal.copy?.legendas?.curta || "Criado com Klipora 🚀";
+      const res = await fetch("/api/instagram/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ igUserId, videoUrl: showPubModal.clipUrl, caption })
+      });
+      const data = await res.json();
+      if (!data.success) { setIgStatus("error"); setCopyToast("❌ Erro: " + data.error); return; }
+
+      // Polling for publish
+      const checkPoll = setInterval(async () => {
+        const s = await fetch("/api/instagram/publish/status", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ igUserId, containerId: data.containerId, publish: true })
+        }).then(r => r.json());
+        
+        if (s.published) {
+          clearInterval(checkPoll);
+          setIgStatus("done");
+          setCopyToast("✅ Publicado no Instagram!");
+        } else if (s.error || s.status === "ERROR") {
+          clearInterval(checkPoll);
+          setIgStatus("error");
+          setCopyToast("❌ Erro no processamento do Instagram");
+        }
+      }, 5000);
+      
+      // Cleanup fallback after 2 mins
+      setTimeout(() => clearInterval(checkPoll), 120000);
+    } catch (e) {
+      setIgStatus("error");
+      setCopyToast("❌ Erro ao publicar");
+    }
   }
 
   const canSubmit = tab === "upload" ? !!file : tab === "link" ? linkUrl.startsWith("http") : qrStatus === "done";
@@ -439,9 +494,30 @@ export default function AppPage() {
               <button className="chip" style={{padding:16,display:"flex",alignItems:"center",gap:12,justifyContent:"center",fontSize:15}} onClick={()=>{copy(showPubModal.copy?.legendas?.curta || "","Legenda copiada!");window.open("https://youtube.com/upload","_blank");}}>
                 <span style={{color:"#ff0000",fontSize:20}}>▶</span> YouTube Shorts (Copiar Legenda e Abrir)
               </button>
-              <button className="chip" style={{padding:16,display:"flex",alignItems:"center",gap:12,justifyContent:"center",fontSize:15,opacity:.5}} disabled>
-                <span style={{color:"#E1306C",fontSize:20}}>📸</span> Instagram Reels (Em breve)
-              </button>
+              
+              {igAccounts === null || igAccounts.length === 0 ? (
+                <button className="chip" style={{padding:16,display:"flex",alignItems:"center",gap:12,justifyContent:"center",fontSize:15}} onClick={()=>window.location.href="/api/auth/instagram"}>
+                  <span style={{color:"#E1306C",fontSize:20}}>📸</span> Conectar Conta do Instagram (Reels)
+                </button>
+              ) : (
+                <div style={{background:"rgba(255,255,255,.03)",border:"1px solid rgba(255,255,255,.1)",borderRadius:12,padding:16}}>
+                  <div style={{fontSize:13,color:"#E1306C",fontWeight:700,marginBottom:12}}>📸 POSTAR NO INSTAGRAM REELS</div>
+                  {igAccounts.map(acc => (
+                    <div key={acc.igId} style={{display:"flex",justifyContent:"space-between",alignItems:"center",background:"rgba(0,0,0,.3)",padding:10,borderRadius:8,marginBottom:8}}>
+                      <div style={{display:"flex",alignItems:"center",gap:10}}>
+                        <img src={acc.igPicture || "https://placehold.co/40x40/333/fff?text=IG"} width={30} height={30} style={{borderRadius:"50%"}} alt="ig"/>
+                        <span style={{fontSize:14,fontWeight:600}}>@{acc.igUsername}</span>
+                      </div>
+                      <button className="pub-btn" onClick={()=>publishToInstagram(acc.igId)} disabled={igStatus==="publishing"}>
+                        {igStatus==="publishing" ? "⏳" : "Publicar"}
+                      </button>
+                    </div>
+                  ))}
+                  {igStatus==="publishing" && <div style={{fontSize:12,color:"#c4a0ff",marginTop:8}}>Enviando e processando vídeo no Meta... (Pode levar até 2 min)</div>}
+                  {igStatus==="done" && <div style={{fontSize:12,color:"#4ade80",marginTop:8}}>✅ Vídeo publicado com sucesso!</div>}
+                </div>
+              )}
+
               <button className="chip" style={{padding:16,display:"flex",alignItems:"center",gap:12,justifyContent:"center",fontSize:15,opacity:.5}} disabled>
                 <span style={{color:"#fff",fontSize:20}}>🎵</span> TikTok (Em breve)
               </button>
