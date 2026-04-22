@@ -42,8 +42,11 @@ export default function AppPage() {
   const [showQrModal, setShowQrModal] = useState(false);
   const [showPubModal, setShowPubModal] = useState<Clip|null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginEmail, setLoginEmail] = useState("");
   const [resolution, setResolution] = useState("720p");
-  const [userPlan] = useState("free"); // TODO: Puxar do banco de dados/Sessão
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [userPlan, setUserPlan] = useState("free");
   const [igAccounts, setIgAccounts] = useState<any[]|null>(null);
   const [igStatus, setIgStatus] = useState<"idle"|"publishing"|"done"|"error">("idle");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -52,6 +55,17 @@ export default function AppPage() {
   const stopPoll = useCallback(() => { if (pollRef.current) clearInterval(pollRef.current); }, []);
 
   useEffect(() => {
+    // Check User Session
+    fetch("/api/auth/me")
+      .then(r => r.json())
+      .then(d => {
+        if (d.user) {
+          setCurrentUser(d.user);
+          setUserPlan(d.user.isPro ? "pro" : "free");
+        }
+      })
+      .catch(()=>{});
+
     // Check IG accounts
     fetch("/api/instagram/accounts")
       .then(r => r.json())
@@ -62,13 +76,39 @@ export default function AppPage() {
     const searchParams = new URLSearchParams(window.location.search);
     if(searchParams.get("success") === "ig_connected") setCopyToast("✅ Instagram conectado com sucesso!");
     if(searchParams.get("error") === "auth_failed") setCopyToast("❌ Erro ao conectar Instagram.");
+    if(searchParams.get("success") === "pro_activated") setCopyToast("🎉 Pagamento aprovado! Você agora é PRO.");
       
     return () => stopPoll();
   }, [stopPoll]);
 
   function handleProFeature(action: () => void) {
-    if (userPlan === "free") setShowUpgradeModal(true);
+    if (userPlan !== "pro") setShowUpgradeModal(true);
     else action();
+  }
+
+  async function handleLogin() {
+    if(!loginEmail.includes('@')) return alert('E-mail inválido');
+    const res = await fetch("/api/auth/session", {
+      method: "POST", body: JSON.stringify({ email: loginEmail })
+    });
+    const data = await res.json();
+    if(data.success) {
+      setCurrentUser(data.user);
+      setUserPlan(data.user.isPro ? "pro" : "free");
+      setShowLoginModal(false);
+      if(showUpgradeModal) handleCheckout();
+    }
+  }
+
+  async function handleCheckout() {
+    if(!currentUser) {
+      setShowLoginModal(true);
+      return;
+    }
+    const res = await fetch("/api/stripe/checkout", { method: "POST" });
+    const data = await res.json();
+    if(data.url) window.location.href = data.url;
+    else alert("Erro: " + data.error);
   }
 
   async function generateQr() {
@@ -255,9 +295,21 @@ export default function AppPage() {
           <div className="logo" style={{fontSize:22}}>KLIPORA</div>
           <div style={{display:"flex",gap:16,alignItems:"center"}}>
             <a href="/" style={{color:"rgba(255,255,255,.6)",textDecoration:"none",fontSize:14,fontWeight:600}}>← Voltar</a>
-            <div style={{color:"rgba(255,255,255,.6)",fontSize:14,fontWeight:600,cursor:"pointer",display:"none"}}>Projetos</div>
-            <div style={{background:"rgba(124,58,237,.15)",color:"#c4a0ff",padding:"6px 14px",borderRadius:100,fontSize:12,fontWeight:700,border:"1px solid rgba(124,58,237,.3)"}}>⚡ 60 min Free</div>
-            <div style={{width:34,height:34,borderRadius:"50%",background:"linear-gradient(135deg,#7c3aed,#c026d3)",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:14,marginLeft:8}}>JS</div>
+            
+            {userPlan === "pro" ? (
+              <div style={{background:"rgba(192,38,211,.15)",color:"#e040fb",padding:"6px 14px",borderRadius:100,fontSize:12,fontWeight:700,border:"1px solid rgba(192,38,211,.3)"}}>👑 KLIPORA PRO</div>
+            ) : (
+              <div style={{background:"rgba(124,58,237,.15)",color:"#c4a0ff",padding:"6px 14px",borderRadius:100,fontSize:12,fontWeight:700,border:"1px solid rgba(124,58,237,.3)"}}>⚡ Grátis (Limites)</div>
+            )}
+            
+            {currentUser ? (
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <div style={{fontSize:13,color:"rgba(255,255,255,.6)"}}>{currentUser.email}</div>
+                <div style={{width:34,height:34,borderRadius:"50%",background:"linear-gradient(135deg,#7c3aed,#c026d3)",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:14}}>{currentUser.email.substring(0,2).toUpperCase()}</div>
+              </div>
+            ) : (
+              <button className="chip" style={{padding:"8px 16px"}} onClick={()=>setShowLoginModal(true)}>Entrar</button>
+            )}
           </div>
         </div>
         <div className="grid">
@@ -533,9 +585,23 @@ export default function AppPage() {
             <div style={{fontSize:40,marginBottom:12}}>👑</div>
             <h2 style={{margin:"0 0 8px",fontSize:22}}>Faça upgrade para o Pro</h2>
             <p style={{fontSize:14,color:"rgba(255,255,255,.6)",marginBottom:24,lineHeight:1.6}}>
-              Esta funcionalidade é exclusiva para assinantes. Libere exportação em 1080p, estilos virais de legenda, remoção da marca d'água e muito mais.
+              Esta funcionalidade é exclusiva para assinantes. Libere exportação em 1080p, estilos virais de legenda e remoção de limites.
             </p>
-            <button className="submit" style={{width:"100%",marginTop:0}} onClick={()=>{window.location.href="/#precos";}}>Ver Planos e Assinar</button>
+            <button className="submit" style={{width:"100%",marginTop:0}} onClick={handleCheckout}>Assinar agora com Stripe / PIX</button>
+          </div>
+        </div>
+      )}
+
+      {showLoginModal && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <button className="modal-close" onClick={()=>setShowLoginModal(false)}>✕</button>
+            <h2 style={{margin:"0 0 8px",fontSize:22}}>Entrar</h2>
+            <p style={{fontSize:14,color:"rgba(255,255,255,.6)",marginBottom:16}}>
+              Digite seu e-mail para salvar seus clips e acessar seu plano PRO.
+            </p>
+            <input type="email" placeholder="seu@email.com" value={loginEmail} onChange={e=>setLoginEmail(e.target.value)} style={{marginBottom:16}} />
+            <button className="submit" style={{width:"100%",marginTop:0}} onClick={handleLogin}>Continuar</button>
           </div>
         </div>
       )}
