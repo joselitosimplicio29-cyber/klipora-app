@@ -13,12 +13,14 @@ const FFMPEG = `ffmpeg`;
 export const maxDuration = 300;
 
 // Estilos de legenda (burn-in via FFmpeg ASS force_style)
+// FontSize menor pois os clips geralmente são 9:16 / 720p vertical
 const SUBTITLE_STYLES: Record<string, string> = {
-  minimalista: `Fontname=Arial,FontSize=16,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,Outline=2,Shadow=1,Alignment=2,MarginV=40`,
-  hormozi: `Fontname=Arial,FontSize=20,PrimaryColour=&H0000FFFF,OutlineColour=&H00000000,Outline=4,Bold=1,Alignment=2,MarginV=40`,
-  neon: `Fontname=Arial,FontSize=16,PrimaryColour=&H00FFFF00,OutlineColour=&H00FF00FF,Outline=3,Alignment=2,MarginV=40`,
-  bold: `Fontname=Arial,FontSize=16,PrimaryColour=&H00FFFFFF,BackColour=&H90000000,BorderStyle=4,Outline=0,Shadow=0,Alignment=2,MarginV=40`,
+  minimalista: `Fontname=Arial,FontSize=13,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,Outline=2,Shadow=1,Alignment=2,MarginV=60`,
+  hormozi:     `Fontname=Arial,FontSize=14,PrimaryColour=&H0000FFFF,OutlineColour=&H00000000,Outline=3,Bold=1,Alignment=2,MarginV=60`,
+  neon:        `Fontname=Arial,FontSize=13,PrimaryColour=&H00FFFF00,OutlineColour=&H00FF00FF,Outline=3,Alignment=2,MarginV=60`,
+  bold:        `Fontname=Arial,FontSize=13,PrimaryColour=&H00FFFFFF,BackColour=&H90000000,BorderStyle=4,Outline=0,Shadow=0,Alignment=2,MarginV=60`,
 };
+
 
 async function uploadToR2(filePath: string, key: string): Promise<string> {
   const buffer = fs.readFileSync(filePath);
@@ -56,7 +58,30 @@ function secondsToSRT(s: number): string {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")},${String(ms).padStart(3, "0")}`;
 }
 
+// Quebra um segmento longo em chunks curtos (max N palavras por entrada)
+// Isso cria o efeito "TikTok/Reels" com poucas palavras por frame
+function splitToChunks(
+  segments: Array<{ start: number; end: number; text: string }>,
+  wordsPerChunk = 4
+): Array<{ start: number; end: number; text: string }> {
+  const result: Array<{ start: number; end: number; text: string }> = [];
+  for (const seg of segments) {
+    const words = seg.text.trim().split(/\s+/).filter(Boolean);
+    if (words.length === 0) continue;
+    const duration = seg.end - seg.start;
+    const timePerWord = duration / words.length;
+    for (let i = 0; i < words.length; i += wordsPerChunk) {
+      const chunk = words.slice(i, i + wordsPerChunk);
+      const chunkStart = seg.start + i * timePerWord;
+      const chunkEnd = Math.min(seg.start + (i + wordsPerChunk) * timePerWord, seg.end);
+      result.push({ start: chunkStart, end: chunkEnd, text: chunk.join(" ") });
+    }
+  }
+  return result;
+}
+
 function buildVTT(segments: Array<{ start: number; end: number; text: string }>): string {
+  // VTT para o player web: segmentos originais (mais legível)
   let vtt = "WEBVTT\n\n";
   for (const seg of segments) {
     const text = seg.text.trim();
@@ -66,8 +91,13 @@ function buildVTT(segments: Array<{ start: number; end: number; text: string }>)
   return vtt;
 }
 
-function buildSRT(segments: Array<{ start: number; end: number; text: string }>): string {
-  return segments
+function buildSRT(
+  segments: Array<{ start: number; end: number; text: string }>,
+  shortChunks = true
+): string {
+  // SRT para burn-in: chunks curtos (efeito viral)
+  const entries = shortChunks ? splitToChunks(segments, 4) : segments;
+  return entries
     .filter(s => s.text.trim())
     .map((seg, i) => `${i + 1}\n${secondsToSRT(seg.start)} --> ${secondsToSRT(seg.end)}\n${seg.text.trim()}\n`)
     .join("\n");
