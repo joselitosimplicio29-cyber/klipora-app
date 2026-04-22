@@ -298,7 +298,7 @@ export default function AppPage() {
                     <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                       {activeClip.captions_url && <a href={activeClip.captions_url} download style={{color:"#c4a0ff",fontSize:12,padding:"6px 10px",border:"1px solid rgba(124,58,237,.4)",borderRadius:6,textDecoration:"none"}}>📥 VTT</a>}
                       {activeClip.srt_url && <a href={activeClip.srt_url} download style={{color:"#c4a0ff",fontSize:12,padding:"6px 10px",border:"1px solid rgba(124,58,237,.4)",borderRadius:6,textDecoration:"none"}}>📥 SRT</a>}
-                      <a className="dl" href={activeClip.clipUrl} download={activeClip.clipFilename}>Baixar</a>
+                      <a className="dl" href={`/api/dl?url=${encodeURIComponent(activeClip.clipUrl)}&filename=${encodeURIComponent(activeClip.clipFilename)}`} download={activeClip.clipFilename}>⬇ Baixar</a>
                     </div>
                   </div>
 
