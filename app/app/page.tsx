@@ -290,7 +290,7 @@ export default function AppPage() {
                     <span style={{color:"rgba(255,255,255,.5)"}}>{fmt(activeClip.start)} → {fmt(activeClip.end)}</span>
                   </div>
                   <video key={activeClip.clipUrl} controls autoPlay crossOrigin="anonymous">
-                    <source src={activeClip.clipUrl} type="video/mp4" />
+                    <source src={`/api/dl?url=${encodeURIComponent(activeClip.clipUrl)}`} type="video/mp4" />
                     {activeClip.captions_url && <track kind="subtitles" src={activeClip.captions_url} srcLang="pt" label="Português" default />}
                   </video>
                   <div className="player-bottom">
@@ -298,7 +298,7 @@ export default function AppPage() {
                     <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                       {activeClip.captions_url && <a href={activeClip.captions_url} download style={{color:"#c4a0ff",fontSize:12,padding:"6px 10px",border:"1px solid rgba(124,58,237,.4)",borderRadius:6,textDecoration:"none"}}>📥 VTT</a>}
                       {activeClip.srt_url && <a href={activeClip.srt_url} download style={{color:"#c4a0ff",fontSize:12,padding:"6px 10px",border:"1px solid rgba(124,58,237,.4)",borderRadius:6,textDecoration:"none"}}>📥 SRT</a>}
-                      <a className="dl" href={`/api/dl?url=${encodeURIComponent(activeClip.clipUrl)}&filename=${encodeURIComponent(activeClip.clipFilename)}`} download={activeClip.clipFilename}>⬇ Baixar</a>
+                      <a className="dl" href={`/api/dl?url=${encodeURIComponent(activeClip.clipUrl)}&filename=${encodeURIComponent(activeClip.clipFilename)}&dl=1`} download={activeClip.clipFilename}>⬇ Baixar</a>
                     </div>
                   </div>
 
