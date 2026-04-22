@@ -29,7 +29,7 @@ export default function AppPage() {
   const [format, setFormat] = useState("original");
   const [subtitleStyle, setSubtitleStyle] = useState("none");
   const [loading, setLoading] = useState(false);
-  const [progress, setProgress] = useState("");
+  const [progress, setProgress] = useState(-1);
   const [result, setResult] = useState<{success?:boolean;error?:string;detail?:string;clips?:Clip[];totalClips?:number;clipDuration?:number;totalSeconds?:number}|null>(null);
   const [activeClip, setActiveClip] = useState<Clip|null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -62,9 +62,8 @@ export default function AppPage() {
   async function handleSubmit() {
     if (loading) return;
     setLoading(true); setResult(null); setActiveClip(null);
-    const msgs = ["Analisando vídeo...","Cortando clips...","Gerando legendas...","Quase pronto..."];
-    let pi = 0; setProgress(msgs[0]);
-    const iv = setInterval(() => { pi=(pi+1)%msgs.length; setProgress(msgs[pi]); }, 4000);
+    let pi = 0; setProgress(0);
+    const iv = setInterval(() => { pi=Math.min(pi+1, 3); setProgress(pi); }, 6000);
     try {
       let res: Response;
       if (tab === "upload") {
@@ -101,7 +100,7 @@ export default function AppPage() {
     } catch (e) {
       setResult({ error: "Erro de rede", detail: String(e) });
     } finally {
-      clearInterval(iv); setLoading(false); setProgress("");
+      clearInterval(iv); setLoading(false); setProgress(-1);
     }
   }
 
@@ -126,9 +125,11 @@ export default function AppPage() {
         .card,.results{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:24px}
         h1{margin:0 0 6px;font-size:26px}
         .sub{color:rgba(255,255,255,.5);font-size:14px;margin-bottom:20px}
-        .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px}
-        .tab{border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:rgba(255,255,255,.6);border-radius:10px;padding:10px;cursor:pointer;font-weight:600;font-size:13px}
-        .tab.on{background:rgba(124,58,237,.2);border-color:#7c3aed;color:#fff}
+        .tabs{display:flex;gap:24px;margin-bottom:24px;border-bottom:1px solid rgba(255,255,255,.1)}
+        .tab{background:transparent;border:none;color:rgba(255,255,255,.5);padding:0 4px 12px;cursor:pointer;font-weight:600;font-size:14px;position:relative;transition:.3s}
+        .tab:hover{color:#fff}
+        .tab.on{color:#fff}
+        .tab.on::after{content:'';position:absolute;bottom:-1px;left:0;width:100%;height:2px;background:#c026d3;box-shadow:0 0 10px #c026d3}
         .label{display:flex;justify-content:space-between;font-size:13px;color:rgba(255,255,255,.5);margin:16px 0 8px}
         .label strong{color:#d38bff}
         .btn-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -256,8 +257,18 @@ export default function AppPage() {
               ))}
             </div>
 
+            {loading && progress >= 0 && (
+              <div style={{display:"flex",justifyContent:"space-between",margin:"20px 0",background:"rgba(0,0,0,.3)",padding:"12px 16px",borderRadius:12,border:"1px solid rgba(255,255,255,.05)"}}>
+                {[{i:"🔍",t:"Analisar"},{i:"✂️",t:"Cortar"},{i:"📝",t:"Legendar"},{i:"📦",t:"Finalizar"}].map((s,i)=>(
+                  <div key={i} style={{display:"flex",alignItems:"center",gap:6,fontSize:13,color:i<progress?"#4ade80":i===progress?"#c4a0ff":"rgba(255,255,255,.3)",fontWeight:600}}>
+                    {i<progress?"✅":i===progress?"⏳":s.i} <span className="prog-text">{s.t}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <button className="submit" onClick={handleSubmit} disabled={loading||!canSubmit}>
-              {loading ? progress||"Processando..." : "⚡ Gerar clips"}
+              {loading ? "Processando..." : "⚡ Gerar clips"}
             </button>
 
             {result && !result.success && (
