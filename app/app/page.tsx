@@ -255,6 +255,10 @@ export default function AppPage() {
         .up-btn.active{background:rgba(139,92,246,.1);border-color:#8B5CF6;box-shadow:0 0 16px rgba(139,92,246,.15)}
         .up-icon{font-size:20px}
 
+        .drop-zone{border:2px dashed rgba(139,92,246,0.30);border-radius:16px;padding:40px 20px;text-align:center;cursor:pointer;background:radial-gradient(circle at top,rgba(139,92,246,0.08),transparent 60%),rgba(255,255,255,0.02);transition:all 180ms ease}
+        .drop-zone:hover,.drop-zone.drag{border-color:rgba(94,230,255,0.58);box-shadow:0 0 0 4px rgba(94,230,255,0.08),0 16px 40px rgba(94,230,255,0.10);transform:translateY(-2px);background:rgba(139,92,246,0.05)}
+
+
         .file-card{background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.2);border-radius:12px;padding:16px;margin-top:24px;position:relative}
         .file-card-close{position:absolute;top:12px;right:12px;background:none;border:none;color:rgba(255,255,255,.4);cursor:pointer}
         .file-name{font-size:13px;font-weight:600;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:20px}
