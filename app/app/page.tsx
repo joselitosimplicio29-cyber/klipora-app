@@ -399,9 +399,7 @@ export default function AppPage() {
 
           <div className="top-actions">
             <a href="/" className="btn-back">← Voltar</a>
-            <button className="btn-next" onClick={handleSubmit} disabled={loading||!canSubmit}>
-              Próximo →
-            </button>
+
           </div>
         </div>
         <div className="grid-3">
@@ -461,34 +459,7 @@ export default function AppPage() {
                 </div>
               )}
 
-              <div className="adv-panel">
-                <div className="adv-btn" style={{cursor:"default"}}>
-                  <span style={{display:"flex",alignItems:"center",gap:8}}>⚙️ Configurações Avançadas</span>
-                </div>
-                <div className="adv-content open" style={{maxHeight:"none",opacity:1}}>
-                  <div className="label" style={{marginTop:8}}><span>Formato</span><strong>{format==="9:16"?"9:16":"Original"}</strong></div>
-                  <div className="btn-grid-2">
-                    {[["original","📺 Original"],["9:16","📱 9:16"]].map(([v,l])=>(
-                      <button key={v} className={`chip${format===v?" on":""}`} onClick={()=>setFormat(v)} disabled={loading}>{l}</button>
-                    ))}
-                  </div>
-                  <div className="label"><span>Duração</span><strong>{fmtD(duration)}</strong></div>
-                  <div className="btn-grid-4">
-                    {DURATIONS.map(d=>(
-                      <button key={d} className={`chip${duration===d?" on":""}`} onClick={()=>setDuration(d)} disabled={loading}>{fmtD(d)}</button>
-                    ))}
-                  </div>
-                  <div className="label"><span>Estilos VIP</span><strong>{STYLES.find(s=>s.id===subtitleStyle)?.label}</strong></div>
-                  <div className="style-grid" style={{gridTemplateColumns:"repeat(3, 1fr)"}}>
-                    {STYLES.map(s=>(
-                      <div key={s.id} className={`style-card${subtitleStyle===s.id?" on":""}`} onClick={()=>s.pro?handleProFeature(()=>setSubtitleStyle(s.id)):setSubtitleStyle(s.id)} style={{position:"relative"}}>
-                        <div className="style-preview" style={s.preview as React.CSSProperties}>Abc</div>
-                        <div className="style-name">{s.label}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
+
 
               {result && !result.success && (
                 <div className="err">
@@ -560,29 +531,43 @@ export default function AppPage() {
                   )}
                 </div>
 
-                <h3 style={{margin:"0 0 12px",fontSize:14}}>Outros Clips Gerados</h3>
-                <div className="clip-list">
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",margin:"32px 0 16px"}}>
+                  <h3 style={{margin:0,fontSize:16,color:"#fff"}}>Clips encontrados <span style={{fontSize:12,color:"rgba(255,255,255,.4)",fontWeight:500,marginLeft:8}}>({result.clips?.length} melhores momentos)</span></h3>
+                  <div style={{fontSize:12,color:"rgba(255,255,255,.4)"}}>Ordernar por: <strong style={{color:"#fff"}}>Relevância ▾</strong></div>
+                </div>
+                <div className="clip-list" style={{gap:12}}>
                   {result.clips?.map(clip=>(
-                    <div key={clip.index} className={`clip-item${activeClip.index===clip.index?" on":""}`} onClick={()=>setActiveClip(clip)}>
+                    <div key={clip.index} className={`clip-item${activeClip.index===clip.index?" on":""}`} style={{padding:16,background:"rgba(255,255,255,.02)",border:"1px solid rgba(255,255,255,.05)",alignItems:"flex-start",gap:16}}>
+                      <div style={{width:80,height:120,background:`url(/api/dl?url=${encodeURIComponent(clip.clipUrl)}) center/cover`,borderRadius:8,flexShrink:0,position:"relative"}}>
+                        <div style={{position:"absolute",bottom:4,right:4,background:"rgba(0,0,0,.8)",color:"#fff",fontSize:10,padding:"2px 6px",borderRadius:4,fontWeight:600}}>{fmtKB(clip.sizeKB)}</div>
+                      </div>
                       <div style={{flex:1}}>
-                        <div style={{fontWeight:600,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                          <span>{fmt(clip.start)} → {fmt(clip.end)}</span>
-                          <span style={{fontSize:11,color:"#4ade80",background:"rgba(74,222,128,.1)",padding:"2px 6px",borderRadius:4}}>🔥 9{clip.index%10}% Viral</span>
+                        <div style={{fontWeight:700,fontSize:15,color:"#fff",marginBottom:8,display:"flex",justifyContent:"space-between"}}>
+                          <span>{clip.copy?.legendas?.curta?.substring(0, 40) || `Momento Viral #${clip.index}`}...</span>
+                          <span style={{color:"rgba(255,255,255,.3)"}}>☑</span>
                         </div>
-                        <div style={{fontSize:12,color:"rgba(255,255,255,.4)",marginTop:4,marginBottom:12}}>{fmtKB(clip.sizeKB)}</div>
                         
-                        <div style={{display:"flex",alignItems:"flex-end",height:24,gap:2,opacity:activeClip.index===clip.index?1:0.5}}>
-                          {Array.from({length: 30}).map((_, i) => {
-                             const h = 20 + Math.abs(Math.sin((clip.index * 13) + i)) * 80;
-                             const color = h > 85 ? "#c026d3" : h > 50 ? "#7c3aed" : "rgba(255,255,255,.2)";
-                             return <div key={i} style={{flex:1,height:`${h}%`,background:color,borderRadius:2}} title="Retenção estimada"/>
-                          })}
+                        <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:16}}>
+                          <span style={{fontSize:10,color:"#f43f5e",background:"rgba(244,63,94,.1)",padding:"4px 8px",borderRadius:4,fontWeight:600}}>🔥 Pico de emoção</span>
+                          <span style={{fontSize:10,color:"#4ade80",background:"rgba(74,222,128,.1)",padding:"4px 8px",borderRadius:4,fontWeight:600}}>🚀 9{clip.index%10}% Viral</span>
+                        </div>
+
+                        <div style={{display:"flex",alignItems:"center",gap:8}}>
+                          <button onClick={(e)=>{e.stopPropagation();setActiveClip(clip);window.scrollTo({top:0,behavior:"smooth"})}} style={{background:"rgba(255,255,255,.05)",border:"none",color:"#fff",padding:"6px 12px",borderRadius:6,fontSize:12,fontWeight:600,cursor:"pointer",transition:".2s"}}>
+                            ▶ Prévia
+                          </button>
+                          <button style={{background:"rgba(139,92,246,.2)",border:"1px solid rgba(139,92,246,.4)",color:"#c4a0ff",padding:"6px 16px",borderRadius:6,fontSize:12,fontWeight:600,cursor:"pointer",transition:".2s"}}>
+                            Selecionar
+                          </button>
                         </div>
                       </div>
-                      <span style={{marginLeft:16,fontSize:18,color:activeClip.index===clip.index?"#c4a0ff":"rgba(255,255,255,.3)"}}>▶</span>
                     </div>
                   ))}
                 </div>
+                
+                <button className="btn-giant" onClick={()=>(document.querySelector('.pub-btn') as HTMLElement)?.click()} style={{width:"100%",background:"linear-gradient(135deg,#8B5CF6,#c026d3)",color:"#fff",border:"none",padding:"16px",borderRadius:12,fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:"0 10px 30px rgba(139,92,246,.3)",marginTop:24}}>
+                  Selecionar e continuar
+                </button>
               </div>
             ) : loading ? (
               <div className="panel" style={{padding:0, overflow:"hidden"}}>
@@ -656,11 +641,64 @@ export default function AppPage() {
                   </div>
                 </div>
               </div>
+            ) : file || (tab === "link" && linkUrl) || qrStatus === "done" ? (
+              <div className="panel" style={{padding:32}}>
+                {file && (
+                  <div style={{borderRadius:16,overflow:"hidden",marginBottom:32,background:"#000",border:"1px solid rgba(255,255,255,.1)",boxShadow:"0 10px 40px rgba(0,0,0,.5)"}}>
+                    <video controls src={URL.createObjectURL(file)} style={{width:"100%",maxHeight:300,display:"block"}} />
+                  </div>
+                )}
+                
+                <h3 style={{margin:"0 0 24px",fontSize:20,color:"#fff",fontWeight:800}}>Configurações dos clips</h3>
+                
+                <div style={{display:"flex",gap:24,marginBottom:32}}>
+                  <div style={{flex:1}}>
+                    <div className="label" style={{marginTop:0}}><span>Formato</span></div>
+                    <div className="btn-grid-2">
+                      {[["original","📺 Original"],["9:16","📱 9:16"]].map(([v,l])=>(
+                        <button key={v} className={`chip${format===v?" on":""}`} onClick={()=>setFormat(v)} disabled={loading} style={{padding:"16px 12px",borderRadius:12}}>{l}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{flex:1.5}}>
+                    <div className="label" style={{marginTop:0}}><span>Duração dos clips</span></div>
+                    <div className="btn-grid-4">
+                      {DURATIONS.map(d=>(
+                        <button key={d} className={`chip${duration===d?" on":""}`} onClick={()=>setDuration(d)} disabled={loading} style={{padding:"16px 12px",borderRadius:12}}>{fmtD(d)}</button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="label"><span>Estilos VIP</span></div>
+                <div className="style-grid" style={{gridTemplateColumns:"repeat(5, 1fr)",marginBottom:32,gap:12}}>
+                  {STYLES.map(s=>(
+                    <div key={s.id} className={`style-card${subtitleStyle===s.id?" on":""}`} onClick={()=>s.pro?handleProFeature(()=>setSubtitleStyle(s.id)):setSubtitleStyle(s.id)} style={{position:"relative",padding:"16px 8px",borderRadius:12}}>
+                      <div className="style-preview" style={{...s.preview as React.CSSProperties, height:28, fontSize:12, marginBottom:8}}>Abc</div>
+                      <div className="style-name" style={{fontSize:11,fontWeight:600}}>{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="label"><span>A IA vai identificar:</span></div>
+                <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:40}}>
+                  <div className="chip-float" style={{position:"relative",boxShadow:"none",background:"rgba(255,255,255,.02)",border:"1px solid rgba(255,255,255,.05)",color:"rgba(255,255,255,.8)"}}><span style={{color:"#f43f5e"}}>😊</span> Picos de emoção</div>
+                  <div className="chip-float" style={{position:"relative",boxShadow:"none",background:"rgba(255,255,255,.02)",border:"1px solid rgba(255,255,255,.05)",color:"rgba(255,255,255,.8)"}}><span style={{color:"#C084FC"}}>🪝</span> Ganchos poderosos</div>
+                  <div className="chip-float" style={{position:"relative",boxShadow:"none",background:"rgba(255,255,255,.02)",border:"1px solid rgba(255,255,255,.05)",color:"rgba(255,255,255,.8)"}}><span style={{color:"#3b82f6"}}>#</span> Tópicos relevantes</div>
+                  <div className="chip-float" style={{position:"relative",boxShadow:"none",background:"rgba(255,255,255,.02)",border:"1px solid rgba(255,255,255,.05)",color:"rgba(255,255,255,.8)"}}><span style={{color:"#4ade80"}}>〰️</span> Ritmo de fala</div>
+                  <div className="chip-float" style={{position:"relative",boxShadow:"none",background:"rgba(255,255,255,.02)",border:"1px solid rgba(255,255,255,.05)",color:"rgba(255,255,255,.8)"}}><span style={{color:"#fbbf24"}}>📈</span> Potencial viral</div>
+                </div>
+
+                <button onClick={handleSubmit} disabled={loading||!canSubmit} style={{width:"100%",background:"linear-gradient(135deg,#8B5CF6,#c026d3)",color:"#fff",border:"none",padding:"20px",borderRadius:16,fontSize:18,fontWeight:800,cursor:"pointer",boxShadow:"0 16px 40px rgba(139,92,246,.3)",transition:".2s"}}>
+                  Começar análise ✨
+                </button>
+                <div style={{textAlign:"center",fontSize:13,color:"rgba(255,255,255,.4)",marginTop:16}}>Nossa IA analisará seu vídeo e encontrará os melhores momentos.</div>
+              </div>
             ) : (
               <div className="panel" style={{height:"100%",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",textAlign:"center",padding:60}}>
                 <div style={{fontSize:60,marginBottom:24,opacity:0.8}}>✨</div>
                 <h2 style={{margin:"0 0 12px",fontSize:24}}>Aguardando vídeo</h2>
-                <p style={{color:"rgba(255,255,255,.5)",fontSize:14,maxWidth:300,lineHeight:1.6}}>Escolha uma opção de entrada na coluna à esquerda e clique em <b>Próximo</b> para iniciarmos a mágica da IA.</p>
+                <p style={{color:"rgba(255,255,255,.5)",fontSize:14,maxWidth:300,lineHeight:1.6}}>Envie um vídeo, cole o link ou escaneie o QR na coluna à esquerda para começar.</p>
               </div>
             )}
           </div>
