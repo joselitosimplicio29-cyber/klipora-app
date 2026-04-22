@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
   };
   if (contentLength) headers["Content-Length"] = contentLength;
   if (contentRange) headers["Content-Range"] = contentRange;
-  if (dl) headers["Content-Disposition"] = `attachment; filename="${encodeURIComponent(filename)}"`;
+  if (dl) headers["Content-Disposition"] = `attachment; filename="${encodeURIComponent(filename)}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
 
   return new NextResponse(upstream.body, {
     status: upstream.status,

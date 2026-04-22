@@ -77,6 +77,14 @@ export default function AppPage() {
     if(searchParams.get("success") === "ig_connected") setCopyToast("✅ Instagram conectado com sucesso!");
     if(searchParams.get("error") === "auth_failed") setCopyToast("❌ Erro ao conectar Instagram.");
     if(searchParams.get("success") === "pro_activated") setCopyToast("🎉 Pagamento aprovado! Você agora é PRO.");
+    
+    if(searchParams.get("action") === "checkout") {
+      // Pequeno delay para garantir que o currentUser já foi carregado
+      setTimeout(() => {
+        const btn = document.getElementById("trigger-checkout");
+        if(btn) btn.click();
+      }, 1500);
+    }
       
     return () => stopPoll();
   }, [stopPoll]);
@@ -827,7 +835,7 @@ export default function AppPage() {
             <p style={{fontSize:14,color:"rgba(255,255,255,.6)",marginBottom:24,lineHeight:1.6}}>
               Esta funcionalidade é exclusiva para assinantes. Libere exportação em 1080p, estilos virais de legenda e remoção de limites.
             </p>
-            <button className="submit" style={{width:"100%",marginTop:0}} onClick={handleCheckout}>Assinar agora com Stripe / PIX</button>
+            <button id="trigger-checkout" className="submit" style={{width:"100%",marginTop:0}} onClick={handleCheckout}>Assinar agora com Stripe / PIX</button>
           </div>
         </div>
       )}

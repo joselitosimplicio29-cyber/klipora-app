@@ -308,7 +308,7 @@ export default function Landing() {
               <div className="plan-price">{p.price}<sub>/mês</sub></div>
               <div className="plan-limit">{p.limit}</div>
               <ul className="plan-feats">{p.feats.map((f, j) => <li key={j}>{f}</li>)}</ul>
-              <button className={`plan-btn ${p.btn}`} onClick={() => window.location.href = "/app"}>{p.cta}</button>
+              <button className={`plan-btn ${p.btn}`} onClick={() => window.location.href = "/app?action=checkout"}>{p.cta}</button>
             </div>
           ))}
         </div>
@@ -346,7 +346,7 @@ export default function Landing() {
         <div style={{ maxWidth: 540, margin: "0 auto", background: "linear-gradient(135deg,rgba(124,58,237,.12),rgba(192,38,211,.08))", border: "1px solid rgba(124,58,237,.3)", borderRadius: 28, padding: "48px 36px" }}>
           <h2 style={{ fontSize: "clamp(24px,4vw,36px)", fontWeight: 900, letterSpacing: -1, marginBottom: 14 }}>Pronto para começar?</h2>
           <p style={{ color: "rgba(255,255,255,.5)", marginBottom: 28, lineHeight: 1.7 }}>Acesso gratuito. Sem cartão de crédito.</p>
-          <button className="btn-main" style={{ padding: "16px 40px", fontSize: 16 }} onClick={() => window.location.href = "/app"}>⚡ Gerar meus primeiros clips</button>
+          <button className="btn-main" style={{ padding: "16px 40px", fontSize: 16 }} onClick={() => window.location.href = "/app?action=checkout"}>⚡ Gerar meus primeiros clips</button>
         </div>
       </section>
 
