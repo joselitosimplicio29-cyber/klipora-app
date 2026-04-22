@@ -458,11 +458,10 @@ export default function AppPage() {
               )}
 
               <div className="adv-panel">
-                <button className="adv-btn" onClick={()=>setShowSettings(!showSettings)}>
-                  <span style={{display:"flex",alignItems:"center",gap:8}}>⚙️ Opções Avançadas</span>
-                  <span style={{transform:showSettings?"rotate(180deg)":"none",transition:".3s"}}>▼</span>
-                </button>
-                <div className={`adv-content${showSettings?" open":""}`}>
+                <div className="adv-btn" style={{cursor:"default"}}>
+                  <span style={{display:"flex",alignItems:"center",gap:8}}>⚙️ Configurações Avançadas</span>
+                </div>
+                <div className="adv-content open" style={{maxHeight:"none",opacity:1}}>
                   <div className="label" style={{marginTop:8}}><span>Formato</span><strong>{format==="9:16"?"9:16":"Original"}</strong></div>
                   <div className="btn-grid-2">
                     {[["original","📺 Original"],["9:16","📱 9:16"]].map(([v,l])=>(
@@ -683,7 +682,9 @@ export default function AppPage() {
             <h3 style={{fontSize:14,color:"#fff",margin:"0 0 16px"}}>Redes sociais suportadas</h3>
             <div className="social-grid">
               <div className="social-icon">🎵</div>
-              <div className="social-icon" style={{background:"linear-gradient(45deg,#f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%)",color:"#fff",borderColor:"transparent"}}>📸</div>
+              <div className="social-icon" style={{background:"linear-gradient(45deg,#f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%)",color:"#fff",borderColor:"transparent"}}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+              </div>
               <div className="social-icon" style={{color:"#ff0000"}}>▶</div>
               <div className="social-icon" style={{color:"#1877F2",fontWeight:900,fontSize:20}}>f</div>
               <div className="social-icon" style={{color:"#0A66C2",fontWeight:900,fontSize:18}}>in</div>
