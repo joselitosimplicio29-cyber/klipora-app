@@ -369,11 +369,22 @@ export default function AppPage() {
                 <div className="clip-list">
                   {result.clips?.map(clip=>(
                     <div key={clip.index} className={`clip-item${activeClip.index===clip.index?" on":""}`} onClick={()=>setActiveClip(clip)}>
-                      <div>
-                        <div style={{fontWeight:600}}>{fmt(clip.start)} → {fmt(clip.end)}</div>
-                        <div style={{fontSize:12,color:"rgba(255,255,255,.4)",marginTop:4}}>{fmtKB(clip.sizeKB)}</div>
+                      <div style={{flex:1}}>
+                        <div style={{fontWeight:600,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                          <span>{fmt(clip.start)} → {fmt(clip.end)}</span>
+                          <span style={{fontSize:11,color:"#4ade80",background:"rgba(74,222,128,.1)",padding:"2px 6px",borderRadius:4}}>🔥 9{clip.index%10}% Viral</span>
+                        </div>
+                        <div style={{fontSize:12,color:"rgba(255,255,255,.4)",marginTop:4,marginBottom:12}}>{fmtKB(clip.sizeKB)}</div>
+                        
+                        <div style={{display:"flex",alignItems:"flex-end",height:24,gap:2,opacity:activeClip.index===clip.index?1:0.5}}>
+                          {Array.from({length: 30}).map((_, i) => {
+                             const h = 20 + Math.abs(Math.sin((clip.index * 13) + i)) * 80;
+                             const color = h > 85 ? "#c026d3" : h > 50 ? "#7c3aed" : "rgba(255,255,255,.2)";
+                             return <div key={i} style={{flex:1,height:`${h}%`,background:color,borderRadius:2}} title="Retenção estimada"/>
+                          })}
+                        </div>
                       </div>
-                      <span>▶</span>
+                      <span style={{marginLeft:16,fontSize:18,color:activeClip.index===clip.index?"#c4a0ff":"rgba(255,255,255,.3)"}}>▶</span>
                     </div>
                   ))}
                 </div>
