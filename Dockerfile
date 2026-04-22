@@ -8,21 +8,13 @@ ENV NODE_OPTIONS=--max-old-space-size=4096
 RUN apt-get update && apt-get install -y \
     curl \
     ffmpeg \
-    python3 \
-    python3-pip \
     && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# Instala yt-dlp sempre na versão mais recente (nightly) para resolver n-challenge e suporte a player_client=ios
-# Cache bust: mudar YT_DLP_BUILD_DATE força rebuild desta layer
-ARG YT_DLP_BUILD_DATE=2026-04-21
-RUN pip3 install -U "yt-dlp[default]" \
-    && pip3 install -U brotli certifi \
-    && yt-dlp --update-to nightly \
-    && yt-dlp --version
 
-ENV YT_DLP_NO_UPDATE=1
+# yt-dlp removido — YouTube não é mais suportado no Klipora
+
 
 WORKDIR /app
 
