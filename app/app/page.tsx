@@ -12,8 +12,8 @@ const DURATIONS = [15, 30, 60, 120];
 const STYLES = [
   { id: "none", label: "Nenhuma", preview: { color: "#888", bg: "transparent", border: "1px dashed #555" } },
   { id: "minimalista", label: "Minimalista", preview: { color: "#fff", bg: "transparent", border: "none", textShadow: "0 1px 4px #000" } },
-  { id: "hormozi", label: "Hormozi", preview: { color: "#ffff00", bg: "transparent", border: "none", fontWeight: 900, textShadow: "0 0 8px #000, 0 0 2px #000" } },
-  { id: "neon", label: "Neon", preview: { color: "#00ffff", bg: "transparent", border: "none", textShadow: "0 0 8px #ff00ff" } },
+  { id: "hormozi", label: "Hormozi", pro: true, preview: { color: "#ffff00", bg: "transparent", border: "none", fontWeight: 900, textShadow: "0 0 8px #000, 0 0 2px #000" } },
+  { id: "neon", label: "Neon", pro: true, preview: { color: "#00ffff", bg: "transparent", border: "none", textShadow: "0 0 8px #ff00ff" } },
   { id: "bold", label: "Bold", preview: { color: "#fff", bg: "rgba(0,0,0,0.7)", border: "none" } },
 ];
 
@@ -41,12 +41,20 @@ export default function AppPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [showQrModal, setShowQrModal] = useState(false);
   const [showPubModal, setShowPubModal] = useState<Clip|null>(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [resolution, setResolution] = useState("720p");
+  const [userPlan] = useState("free"); // TODO: Puxar do banco de dados/Sessão
   const fileRef = useRef<HTMLInputElement>(null);
   const pollRef = useRef<NodeJS.Timeout|null>(null);
 
   const stopPoll = useCallback(() => { if (pollRef.current) clearInterval(pollRef.current); }, []);
 
   useEffect(() => () => stopPoll(), [stopPoll]);
+
+  function handleProFeature(action: () => void) {
+    if (userPlan === "free") setShowUpgradeModal(true);
+    else action();
+  }
 
   async function generateQr() {
     setQrStatus("waiting"); setQrToken(null); setQrUrl(null); setQrVideoPath(null); setShowQrModal(true);
@@ -74,10 +82,11 @@ export default function AppPage() {
         form.append("video", file!);
         form.append("duration", String(duration));
         form.append("format", format);
+        form.append("resolution", resolution);
         form.append("subtitleStyle", subtitleStyle);
         res = await fetch("/api/process-video", { method: "POST", body: form });
       } else {
-        let body: Record<string, unknown> = { duration, format, subtitleStyle };
+        let body: Record<string, unknown> = { duration, format, subtitleStyle, resolution };
         if (tab === "link") {
           // primeiro baixa o link, depois processa
           const dlRes = await fetch("/api/download-link", {
@@ -257,6 +266,14 @@ export default function AppPage() {
                   ))}
                 </div>
 
+                <div className="label"><span>Resolução</span><strong>{resolution==="1080p"?"1080p Full HD":"720p HD"}</strong></div>
+                <div className="btn-grid-2">
+                  <button className={`chip${resolution==="720p"?" on":""}`} onClick={()=>setResolution("720p")} disabled={loading}>720p HD</button>
+                  <button className={`chip${resolution==="1080p"?" on":""}`} onClick={()=>handleProFeature(()=>setResolution("1080p"))} disabled={loading} style={{position:"relative"}}>
+                    1080p Full HD <span style={{position:"absolute",top:-6,right:-6,background:"#c026d3",fontSize:9,padding:"2px 6px",borderRadius:4,fontWeight:900,color:"#fff"}}>PRO</span>
+                  </button>
+                </div>
+
                 <div className="label"><span>Duração do clip</span><strong>{fmtD(duration)}</strong></div>
                 <div className="btn-grid-4">
                   {DURATIONS.map(d=>(
@@ -267,7 +284,8 @@ export default function AppPage() {
                 <div className="label"><span>Estilo de legenda</span><strong>{STYLES.find(s=>s.id===subtitleStyle)?.label}</strong></div>
                 <div className="style-grid">
                   {STYLES.map(s=>(
-                    <div key={s.id} className={`style-card${subtitleStyle===s.id?" on":""}`} onClick={()=>setSubtitleStyle(s.id)}>
+                    <div key={s.id} className={`style-card${subtitleStyle===s.id?" on":""}`} onClick={()=>s.pro?handleProFeature(()=>setSubtitleStyle(s.id)):setSubtitleStyle(s.id)} style={{position:"relative"}}>
+                      {s.pro && <span style={{position:"absolute",top:-6,right:-6,background:"#c026d3",fontSize:9,padding:"2px 6px",borderRadius:4,fontWeight:900,color:"#fff",zIndex:10}}>PRO</span>}
                       <div className="style-preview" style={s.preview as React.CSSProperties}>Abc</div>
                       <div className="style-name">{s.label}</div>
                     </div>
@@ -409,6 +427,20 @@ export default function AppPage() {
                 <span style={{color:"#fff",fontSize:20}}>🎵</span> TikTok (Em breve)
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showUpgradeModal && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <button className="modal-close" onClick={()=>setShowUpgradeModal(false)}>✕</button>
+            <div style={{fontSize:40,marginBottom:12}}>👑</div>
+            <h2 style={{margin:"0 0 8px",fontSize:22}}>Faça upgrade para o Pro</h2>
+            <p style={{fontSize:14,color:"rgba(255,255,255,.6)",marginBottom:24,lineHeight:1.6}}>
+              Esta funcionalidade é exclusiva para assinantes. Libere exportação em 1080p, estilos virais de legenda, remoção da marca d'água e muito mais.
+            </p>
+            <button className="submit" style={{width:"100%",marginTop:0}} onClick={()=>{window.location.href="/#precos";}}>Ver Planos e Assinar</button>
           </div>
         </div>
       )}
