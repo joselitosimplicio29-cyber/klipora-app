@@ -24,7 +24,12 @@ export async function POST(req: Request) {
     }
 
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
+      payment_method_types: ["card", "pix"],
+      payment_method_options: {
+        pix: {
+          expires_after_seconds: 1800, // 30 minutos para pagar
+        },
+      },
       line_items: [
         {
           price: process.env.STRIPE_PRICE_ID,

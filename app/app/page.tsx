@@ -133,6 +133,18 @@ export default function AppPage() {
     }, 2000);
   }
 
+  async function handleCheckout() {
+    setCopyToast("⏳ Iniciando pagamento...");
+    try {
+      const res = await fetch("/api/stripe/checkout", { method: "POST" });
+      const data = await res.json();
+      if (data.url) window.location.href = data.url;
+      else setCopyToast("❌ Erro ao abrir checkout: " + (data.error || "Tente novamente"));
+    } catch (e) {
+      setCopyToast("❌ Erro de conexão com o servidor");
+    }
+  }
+
   async function handleSubmit() {
     if (loading) return;
     setLoading(true); setResult(null); setActiveClip(null);
@@ -176,6 +188,18 @@ export default function AppPage() {
       setResult({ error: "Erro de rede", detail: String(e) });
     } finally {
       clearInterval(iv); setLoading(false); setProgress(-1);
+    }
+  }
+
+  async function handleCheckout() {
+    setCopyToast("⏳ Iniciando pagamento...");
+    try {
+      const res = await fetch("/api/stripe/checkout", { method: "POST" });
+      const data = await res.json();
+      if (data.url) window.location.href = data.url;
+      else setCopyToast("❌ Erro ao abrir checkout");
+    } catch (e) {
+      setCopyToast("❌ Erro de conexão");
     }
   }
 
@@ -223,6 +247,25 @@ export default function AppPage() {
       setIgStatus("error");
       setCopyToast("❌ Erro ao publicar");
     }
+  }
+
+  function shareToWhatsApp(clip: Clip) {
+    const text = `🚀 Meu clipe está pronto!\n\nLink: ${clip.clipUrl}\n\nLegenda: ${clip.copy?.legendas?.curta || ""}\n\n#klipora #ia`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+  }
+
+  function shareToSMS(clip: Clip) {
+    const phone = prompt("Digite o número de telefone (com DDD):", "");
+    if (!phone) return;
+    setCopyToast("⏳ Enviando SMS...");
+    fetch("/api/sms/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone, clipUrl: clip.clipUrl })
+    }).then(r => r.json()).then(d => {
+      if (d.success) setCopyToast("✅ SMS enviado!");
+      else setCopyToast("❌ Erro ao enviar SMS");
+    });
   }
 
   const canSubmit = tab === "upload" ? !!file : tab === "link" ? linkUrl.startsWith("http") : qrStatus === "done";
@@ -405,9 +448,21 @@ export default function AppPage() {
             </div>
           </div>
 
-          <div className="top-actions">
+          <div className="top-actions" style={{display:"flex",alignItems:"center",gap:16}}>
+            {userPlan !== "pro" && (
+              <button className="btn-main" id="trigger-checkout" style={{padding:"8px 20px",fontSize:13}} onClick={handleCheckout}>
+                💎 Seja PRO
+              </button>
+            )}
+            {userPlan === "pro" && (
+              <span style={{background:"rgba(139,92,246,0.2)",color:"#C084FC",padding:"4px 14px",borderRadius:100,fontSize:11,fontWeight:700,border:"1px solid rgba(139,92,246,0.3)"}}>
+                PRO
+              </span>
+            )}
+            <div className="user-avatar" style={{width:32,height:32,borderRadius:"50%",background:"rgba(255,255,255,0.1)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,cursor:pointer,border:"1px solid rgba(255,255,255,0.1)"}} onClick={()=>window.location.href="/api/auth/logout"}>
+              {currentUser?.email?.charAt(0).toUpperCase() || "U"}
+            </div>
             <a href="/" className="btn-back">← Voltar</a>
-
           </div>
         </div>
         <div className="grid-3">
@@ -440,6 +495,9 @@ export default function AppPage() {
                     <button className="file-card-close" onClick={()=>setFile(null)}>✕</button>
                     <div className="file-name">{file.name}</div>
                     <div className="file-meta">{fmtKB(Math.round(file.size/1024))}</div>
+                    <div style={{fontSize:11,color:"#8B5CF6",marginTop:4,fontWeight:600}}>
+                       {/* Duração detectada via preview */}
+                    </div>
                     {loading && progress >= 0 && (
                       <>
                         <div className="prog-bar-bg"><div className="prog-bar-fill" style={{width:`${Math.max(10, progress*25)}%`}}></div></div>
@@ -514,10 +572,6 @@ export default function AppPage() {
                   </div>
 
                   <div className="player-bottom">
-                    <div style={{display:"flex",flexDirection:"column"}}>
-                      <span style={{color:"rgba(255,255,255,.8)",fontSize:14,fontWeight:600}}>{fmt(activeClip.start)} → {fmt(activeClip.end)}</span>
-                      <span style={{color:"rgba(255,255,255,.4)",fontSize:12,marginTop:2}}>{fmtKB(activeClip.sizeKB)}</span>
-                    </div>
                     <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
                       <button className="pub-btn" onClick={()=>setShowPubModal(activeClip)}>🚀 Publicar</button>
                       <a className="dl" href={`/api/dl?url=${encodeURIComponent(activeClip.clipUrl)}&filename=${encodeURIComponent(activeClip.clipFilename)}&dl=1`} download={activeClip.clipFilename}>⬇ Baixar Clip</a>
@@ -670,7 +724,7 @@ export default function AppPage() {
                   </div>
                   <div style={{flex:1.5}}>
                     <div className="label" style={{marginTop:0}}><span>Duração dos clips</span></div>
-                    <div className="btn-grid-4">
+                  <div className="btn-grid-4">
                       {DURATIONS.map(d=>(
                         <button key={d} className={`chip${duration===d?" on":""}`} onClick={()=>setDuration(d)} disabled={loading} style={{padding:"16px 12px",borderRadius:12}}>{fmtD(d)}</button>
                       ))}
@@ -678,12 +732,19 @@ export default function AppPage() {
                   </div>
                 </div>
 
-                <div className="label"><span>Estilos VIP</span></div>
+                <div className="label"><span>Estilos VIP</span> {userPlan !== "pro" && <span style={{fontSize:10,background:"#F59E0B",color:"#000",padding:"2px 6px",borderRadius:4,fontWeight:800,marginLeft:8}}>PRO</span>}</div>
                 <div className="style-grid" style={{gridTemplateColumns:"repeat(5, 1fr)",marginBottom:32,gap:12}}>
                   {STYLES.map(s=>(
-                    <div key={s.id} className={`style-card${subtitleStyle===s.id?" on":""}`} onClick={()=>s.pro?handleProFeature(()=>setSubtitleStyle(s.id)):setSubtitleStyle(s.id)} style={{position:"relative",padding:"16px 8px",borderRadius:12}}>
+                    <div key={s.id} className={`style-card${subtitleStyle===s.id?" on":""}`} onClick={()=>{
+                      if(s.pro && userPlan !== "pro") {
+                        setCopyToast("💎 Este estilo é exclusivo para membros PRO!");
+                        handleCheckout();
+                        return;
+                      }
+                      setSubtitleStyle(s.id);
+                    }} style={{position:"relative",padding:"16px 8px",borderRadius:12}}>
                       <div className="style-preview" style={{...s.preview as React.CSSProperties, height:28, fontSize:12, marginBottom:8}}>Abc</div>
-                      <div className="style-name" style={{fontSize:11,fontWeight:600}}>{s.label}</div>
+                      <div className="style-name" style={{fontSize:11,fontWeight:600}}>{s.label} {s.pro && userPlan !== "pro" && "👑"}</div>
                     </div>
                   ))}
                 </div>
@@ -817,6 +878,14 @@ export default function AppPage() {
                   {igStatus==="done" && <div style={{fontSize:12,color:"#4ade80",marginTop:8}}>✅ Vídeo publicado com sucesso!</div>}
                 </div>
               )}
+
+              <button className="chip" style={{padding:16,display:"flex",alignItems:"center",gap:12,justifyContent:"center",fontSize:15, background: "#25D366", color: "#fff", border: "none"}} onClick={() => shareToWhatsApp(showPubModal)}>
+                <span style={{fontSize:20}}>💬</span> Enviar para WhatsApp (Custo Zero)
+              </button>
+
+              <button className="chip" style={{padding:16,display:"flex",alignItems:"center",gap:12,justifyContent:"center",fontSize:15}} onClick={() => shareToSMS(showPubModal)}>
+                <span style={{fontSize:20}}>📱</span> Enviar via SMS
+              </button>
 
               <button className="chip" style={{padding:16,display:"flex",alignItems:"center",gap:12,justifyContent:"center",fontSize:15,opacity:.5}} disabled>
                 <span style={{color:"#fff",fontSize:20}}>🎵</span> TikTok (Em breve)

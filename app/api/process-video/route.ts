@@ -4,6 +4,8 @@ import path from "path";
 import fs from "fs";
 import { r2 } from "@/lib/r2";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { cookies } from "next/headers";
+import { db } from "@/lib/db";
 
 const ROOT_DIR = process.cwd();
 const DOWNLOADS_DIR = path.join(ROOT_DIR, "downloads");
@@ -133,7 +135,6 @@ async function generateSubtitles(clipPath: string): Promise<{
       body: groqForm,
     });
 
-    if (groqRes.ok) {
       const data = await groqRes.json() as {
         text?: string;
         segments?: Segment[];
@@ -153,7 +154,6 @@ async function generateSubtitles(clipPath: string): Promise<{
   }
   return { vttContent: "", srtContent: "", subtitle: "", segments: [] };
 }
-
 async function generateCopy(subtitle: string): Promise<{
   legendas: { curta: string; media: string; longa: string };
   hooks: string[];
@@ -200,6 +200,11 @@ export async function POST(req: NextRequest) {
   if (!fs.existsSync(DOWNLOADS_DIR)) {
     fs.mkdirSync(DOWNLOADS_DIR, { recursive: true });
   }
+
+  const cookieStore = await cookies();
+  const sessionId = cookieStore.get("klipora_session")?.value;
+  const user = sessionId ? db.getUserById(sessionId) : null;
+  const isPro = user?.isPro || false;
 
   const timestamp = Date.now();
   const videoPath = path.join(DOWNLOADS_DIR, `video_${timestamp}.mp4`);
@@ -281,8 +286,14 @@ export async function POST(req: NextRequest) {
   }
 
   if (totalSeconds < clipDuration) {
+    // Se o vídeo for menor que a duração desejada, simplesmente usamos a duração total do vídeo
+    // Isso evita o erro de "vídeo muito curto"
+    clipDuration = totalSeconds;
+  }
+
+  if (totalSeconds < 1) {
     try { fs.unlinkSync(videoPath); } catch { }
-    return NextResponse.json({ error: `Vídeo muito curto (${totalSeconds}s) para clips de ${clipDuration}s` }, { status: 400 });
+    return NextResponse.json({ error: "Vídeo inválido ou sem duração detectada." }, { status: 400 });
   }
 
   const clips: {
@@ -299,9 +310,10 @@ export async function POST(req: NextRequest) {
   }[] = [];
   const clipErrors: string[] = [];
 
-  const totalClips = Math.floor(totalSeconds / clipDuration);
-  const videoFilter = format === "9:16" ? `-vf "crop=ih*9/16:ih:(iw-ih*9/16)/2:0"` : "";
-  const videoCodec = format === "9:16" ? "-c:v libx264 -preset fast -crf 23" : "-c:v copy";
+  const totalClips = isPro ? Math.floor(totalSeconds / clipDuration) : 1;
+  const watermarkFilter = !isPro ? `,drawtext=text='KLIPORA.COM.BR':x=w-tw-20:y=20:fontsize=28:fontcolor=white@0.6:box=1:boxcolor=black@0.4:boxborderw=5` : "";
+  const videoFilter = format === "9:16" ? `-vf "crop=ih*9/16:ih:(iw-ih*9/16)/2:0${watermarkFilter}"` : (watermarkFilter ? `-vf "${watermarkFilter.slice(1)}"` : "");
+  const videoCodec = (format === "9:16" || !isPro) ? "-c:v libx264 -preset fast -crf 23" : "-c:v copy";
   const hasStyle = subtitleStyle !== "none" && subtitleStyle in SUBTITLE_STYLES;
 
   for (let i = 0; i < totalClips; i++) {
