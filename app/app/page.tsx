@@ -125,14 +125,19 @@ export default function AppPage() {
   }
 
   async function handleCheckout() {
-    if(!currentUser) {
-      setShowLoginModal(true);
-      return;
+    setCopyToast("⏳ Iniciando pagamento...");
+    try {
+      if (!currentUser) {
+        setShowLoginModal(true);
+        return;
+      }
+      const res = await fetch("/api/stripe/checkout", { method: "POST" });
+      const data = await res.json();
+      if (data.url) window.location.href = data.url;
+      else setCopyToast("❌ Erro ao abrir checkout: " + (data.error || "Tente novamente"));
+    } catch (e) {
+      setCopyToast("❌ Erro de conexão com o servidor");
     }
-    const res = await fetch("/api/stripe/checkout", { method: "POST" });
-    const data = await res.json();
-    if(data.url) window.location.href = data.url;
-    else alert("Erro: " + data.error);
   }
 
   async function generateQr() {
@@ -147,18 +152,6 @@ export default function AppPage() {
         stopPoll(); setQrStatus("done"); setQrVideoPath(s.videoPath); setShowQrModal(false);
       }
     }, 2000);
-  }
-
-  async function handleCheckout() {
-    setCopyToast("⏳ Iniciando pagamento...");
-    try {
-      const res = await fetch("/api/stripe/checkout", { method: "POST" });
-      const data = await res.json();
-      if (data.url) window.location.href = data.url;
-      else setCopyToast("❌ Erro ao abrir checkout: " + (data.error || "Tente novamente"));
-    } catch (e) {
-      setCopyToast("❌ Erro de conexão com o servidor");
-    }
   }
 
   async function handleSubmit() {
@@ -179,7 +172,6 @@ export default function AppPage() {
       } else {
         let body: Record<string, unknown> = { duration, format, subtitleStyle, resolution };
         if (tab === "link") {
-          // primeiro baixa o link, depois processa
           const dlRes = await fetch("/api/download-link", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -204,18 +196,6 @@ export default function AppPage() {
       setResult({ error: "Erro de rede", detail: String(e) });
     } finally {
       clearInterval(iv); setLoading(false); setProgress(-1);
-    }
-  }
-
-  async function handleCheckout() {
-    setCopyToast("⏳ Iniciando pagamento...");
-    try {
-      const res = await fetch("/api/stripe/checkout", { method: "POST" });
-      const data = await res.json();
-      if (data.url) window.location.href = data.url;
-      else setCopyToast("❌ Erro ao abrir checkout");
-    } catch (e) {
-      setCopyToast("❌ Erro de conexão");
     }
   }
 
@@ -475,7 +455,7 @@ export default function AppPage() {
                 PRO
               </span>
             )}
-            <div className="user-avatar" style={{width:32,height:32,borderRadius:"50%",background:"rgba(255,255,255,0.1)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,cursor:pointer,border:"1px solid rgba(255,255,255,0.1)"}} onClick={()=>window.location.href="/api/auth/logout"}>
+            <div className="user-avatar" style={{width:32,height:32,borderRadius:"50%",background:"rgba(255,255,255,0.1)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,cursor:"pointer",border:"1px solid rgba(255,255,255,0.1)"}} onClick={()=>window.location.href="/api/auth/logout"}>
               {currentUser?.email?.charAt(0).toUpperCase() || "U"}
             </div>
             <a href="/" className="btn-back">← Voltar</a>

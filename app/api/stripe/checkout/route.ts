@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     }
 
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: "2025-01-27-preview", // Usando a versão mais estável/recente
+      apiVersion: "2026-03-25.dahlia" as any, 
     });
     const cookieStore = await cookies();
     const sessionId = cookieStore.get("klipora_session")?.value;

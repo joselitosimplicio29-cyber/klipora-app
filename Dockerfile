@@ -22,27 +22,26 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 
-# Copia o restante do código (node_modules e .next são ignorados pelo .dockerignore)
+# Copia o restante do código
 COPY . .
 
-# Cria pasta de downloads temporários
-RUN mkdir -p downloads
+# Cria pastas necessárias (downloads e data para o banco JSON)
+RUN mkdir -p downloads data
 
 # Faz o build de produção
 RUN npm run build
 
-# Copia os arquivos estáticos para dentro do standalone (exigido pelo output: 'standalone')
+# Copia os arquivos estáticos e a pasta de dados para dentro do standalone
 RUN cp -r public .next/standalone/public \
-    && cp -r .next/static .next/standalone/.next/static
+    && cp -r .next/static .next/standalone/.next/static \
+    && cp -r data .next/standalone/data 2>/dev/null || true
 
-# Copia cookies.txt e cria pasta downloads dentro do standalone
-# (process.cwd() no servidor standalone aponta para .next/standalone)
-RUN cp cookies.txt .next/standalone/cookies.txt 2>/dev/null || true \
-    && mkdir -p .next/standalone/downloads
+# Copia cookies.txt
+RUN cp cookies.txt .next/standalone/cookies.txt 2>/dev/null || true
 
-EXPOSE 3000
+EXPOSE 8080
 
-ENV PORT=3000
+ENV PORT=8080
 ENV HOSTNAME=0.0.0.0
 
 CMD ["node", ".next/standalone/server.js"]
