@@ -19,8 +19,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Usuário não encontrado." }, { status: 404 });
     }
 
-    if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_PRICE_ID) {
-      return NextResponse.json({ error: "Stripe não está configurado." }, { status: 500 });
+    if (!process.env.STRIPE_SECRET_KEY) {
+      return NextResponse.json({ error: "Erro: Chave STRIPE_SECRET_KEY não encontrada no servidor." }, { status: 500 });
+    }
+    if (!process.env.STRIPE_PRICE_ID) {
+      return NextResponse.json({ error: "Erro: ID do plano STRIPE_PRICE_ID não encontrado no servidor." }, { status: 500 });
     }
 
     const session = await stripe.checkout.sessions.create({
