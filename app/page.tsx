@@ -112,7 +112,10 @@ export default function Landing() {
           <li><a href="#precos">Preços</a></li>
           <li><a href="#faq">FAQ</a></li>
         </ul>
-        <button className="btn-p" onClick={() => window.location.href = "/app"}>Começar grátis</button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <button style={{ background: 'none', border: 'none', color: '#B8BED6', fontSize: '14px', cursor: 'pointer' }} onClick={() => window.location.href = "/app?action=login"}>Entrar</button>
+          <button className="btn-p" onClick={() => window.location.href = "/app?action=login"}>Começar grátis</button>
+        </div>
       </nav>
 
       <div className="hero animate">
@@ -120,7 +123,7 @@ export default function Landing() {
         <h1>1 vídeo.<br /><span className="hl">Dezenas de clips prontos.</span></h1>
         <p className="sub">Suba o vídeo do PC, cole um link do Drive ou escaneie o QR com o celular. A IA corta, legenda e empacota tudo.</p>
         <div className="btns">
-          <button className="btn-main" onClick={() => window.location.href = "/app"}>⚡ Gerar clips grátis</button>
+          <button className="btn-main" onClick={() => window.location.href = "/app?action=login"}>⚡ Gerar clips grátis</button>
           <button className="btn-sec" onClick={() => document.getElementById("precos")?.scrollIntoView({ behavior: "smooth" })}>Ver planos</button>
         </div>
         <div className="stats">
@@ -308,7 +311,12 @@ export default function Landing() {
               <div className="plan-price">{p.price}<sub>/mês</sub></div>
               <div className="plan-limit">{p.limit}</div>
               <ul className="plan-feats">{p.feats.map((f, j) => <li key={j}>{f}</li>)}</ul>
-              <button className={`plan-btn ${p.btn}`} onClick={() => window.location.href = "/app?action=checkout"}>{p.cta}</button>
+              <button 
+                className={`plan-btn ${p.btn}`} 
+                onClick={() => window.location.href = p.name === "Free" ? "/app?action=login" : "/app?action=checkout"}
+              >
+                {p.cta}
+              </button>
             </div>
           ))}
         </div>
@@ -346,7 +354,7 @@ export default function Landing() {
         <div style={{ maxWidth: 540, margin: "0 auto", background: "linear-gradient(135deg,rgba(124,58,237,.12),rgba(192,38,211,.08))", border: "1px solid rgba(124,58,237,.3)", borderRadius: 28, padding: "48px 36px" }}>
           <h2 style={{ fontSize: "clamp(24px,4vw,36px)", fontWeight: 900, letterSpacing: -1, marginBottom: 14 }}>Pronto para começar?</h2>
           <p style={{ color: "rgba(255,255,255,.5)", marginBottom: 28, lineHeight: 1.7 }}>Acesso gratuito. Sem cartão de crédito.</p>
-          <button className="btn-main" style={{ padding: "16px 40px", fontSize: 16 }} onClick={() => window.location.href = "/app?action=checkout"}>⚡ Gerar meus primeiros clips</button>
+          <button className="btn-main" style={{ padding: "16px 40px", fontSize: 16 }} onClick={() => window.location.href = "/app?action=login"}>⚡ Gerar meus primeiros clips</button>
         </div>
       </section>
 

@@ -78,6 +78,11 @@ export default function AppPage() {
     if(searchParams.get("error") === "auth_failed") setCopyToast("❌ Erro ao conectar Instagram.");
     if(searchParams.get("success") === "pro_activated") setCopyToast("🎉 Pagamento aprovado! Você agora é PRO.");
     
+    if(searchParams.get("action") === "login") {
+      setShowLoginModal(true);
+      setCopyToast("👋 Bem-vindo! Entre com seu e-mail para começar.");
+    }
+    
     if(searchParams.get("action") === "checkout") {
       // Verifica se já temos o usuário carregado
       if (!currentUser) {
