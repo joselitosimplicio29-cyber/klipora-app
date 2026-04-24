@@ -1,6 +1,19 @@
 "use client";
 import { useState, useEffect } from "react";
 const P = { starter: 67, pro: 127, agency: 247 };
+
+function FAQItem({ q, a }: { q: string, a: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="faq-item">
+      <button className="faq-btn" onClick={() => setOpen(!open)}>
+        {q}<div className="faq-icon">{open ? "−" : "+"}</div>
+      </button>
+      <div className={`faq-ans${open ? " open" : ""}`}><p>{a}</p></div>
+    </div>
+  );
+}
+
 export default function Landing() {
   const [ann, setAnn] = useState(false);
   const disc = (n: number) => ann ? Math.round(n * 0.8) : n;
@@ -336,17 +349,9 @@ export default function Landing() {
             { q: "O que é o Share Pack?", a: "É o pacote pronto para postar: legenda curta/média/longa gerada por IA, 3 hooks de impacto e 10 hashtags. Tudo copiável com 1 clique." },
             { q: "Posso cancelar quando quiser?", a: "Sim, sem fidelidade e sem multa. Cancele a qualquer momento pelo painel." },
             { q: "Como funcionam os minutos do plano?", a: "São minutos de vídeo processado. 1 episódio de 60 min usa 60 minutos do seu saldo. O plano Free (60 min) cobre 1 episódio completo por mês." },
-          ].map((f, i) => {
-            const [open, setOpen] = useState(false);
-            return (
-              <div key={i} className="faq-item">
-                <button className="faq-btn" onClick={() => setOpen(!open)}>
-                  {f.q}<div className="faq-icon">{open ? "−" : "+"}</div>
-                </button>
-                <div className={`faq-ans${open ? " open" : ""}`}><p>{f.a}</p></div>
-              </div>
-            );
-          })}
+          ].map((f, i) => (
+            <FAQItem key={i} q={f.q} a={f.a} />
+          ))}
         </div>
       </section>
 
