@@ -163,8 +163,7 @@ async function generateSubtitles(clipPath: string): Promise<{
         subtitle: data.text?.trim() ?? "",
         segments,
       };
-    }
-  } catch {
+    } catch {
     // legendas são opcionais
   } finally {
     try { fs.unlinkSync(audioPath); } catch { }
