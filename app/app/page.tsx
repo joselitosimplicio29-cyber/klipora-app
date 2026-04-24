@@ -79,19 +79,22 @@ export default function AppPage() {
     if(searchParams.get("success") === "pro_activated") setCopyToast("🎉 Pagamento aprovado! Você agora é PRO.");
     
     if(searchParams.get("action") === "checkout") {
-      // Aguarda um pouco o carregamento da sessão
-      setTimeout(() => {
+      // Verifica se já temos o usuário carregado
+      if (!currentUser) {
+        // Se ainda não carregou, tenta buscar rápido
         fetch("/api/auth/me")
           .then(r => r.json())
           .then(d => {
             if (!d.user) {
               setShowLoginModal(true);
-              setCopyToast("👋 Por favor, faça login para continuar com a assinatura.");
+              setCopyToast("👋 Por favor, faça login para continuar.");
             } else if (!d.user.isPro) {
               handleCheckout();
             }
           });
-      }, 1000);
+      } else if (!currentUser.isPro) {
+        handleCheckout();
+      }
     }
       
     return () => stopPoll();
