@@ -1,12 +1,17 @@
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import Stripe from "stripe";
 import { cookies } from "next/headers";
 import { db } from "@/lib/db";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "sk_test_dummy", { apiVersion: "2024-04-10" as any });
-
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
+    if (!process.env.STRIPE_SECRET_KEY) {
+      return NextResponse.json({ error: "Erro: Chave STRIPE_SECRET_KEY não encontrada no painel do Railway." }, { status: 500 });
+    }
+
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: "2025-01-27-preview", // Usando a versão mais estável/recente
+    });
     const cookieStore = await cookies();
     const sessionId = cookieStore.get("klipora_session")?.value;
 
