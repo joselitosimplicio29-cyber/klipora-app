@@ -23,6 +23,23 @@ const SUBTITLE_STYLES: Record<string, string> = {
   bold:        `Fontname=Arial,FontSize=13,PrimaryColour=&H00FFFFFF,BackColour=&H90000000,BorderStyle=4,Outline=0,Shadow=0,Alignment=2,MarginV=60`,
 };
 
+interface ProcessedClip {
+  clipUrl: string;
+  clipFilename: string;
+  start: number;
+  end: number;
+  sizeKB: number;
+  index: number;
+  subtitle: string;
+  captions_url: string;
+  srt_url: string;
+  copy: { 
+    legendas: { curta: string; media: string; longa: string }; 
+    hooks: string[]; 
+    hashtags: string[] 
+  };
+}
+
 
 async function uploadToR2(filePath: string, key: string): Promise<string> {
   const buffer = fs.readFileSync(filePath);
@@ -294,19 +311,6 @@ export async function POST(req: NextRequest) {
   if (totalSeconds < 1) {
     try { fs.unlinkSync(videoPath); } catch { }
     return NextResponse.json({ error: "Vídeo inválido ou sem duração detectada." }, { status: 400 });
-  }
-
-  interface ProcessedClip {
-    clipUrl: string;
-    clipFilename: string;
-    start: number;
-    end: number;
-    sizeKB: number;
-    index: number;
-    subtitle: string;
-    captions_url: string;
-    srt_url: string;
-    copy: { legendas: { curta: string; media: string; longa: string }; hooks: string[]; hashtags: string[] };
   }
 
   const clips: ProcessedClip[] = [];
