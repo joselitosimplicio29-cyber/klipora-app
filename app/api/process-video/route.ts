@@ -296,7 +296,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Vídeo inválido ou sem duração detectada." }, { status: 400 });
   }
 
-  const clips: {
+  interface ProcessedClip {
     clipUrl: string;
     clipFilename: string;
     start: number;
@@ -307,7 +307,9 @@ export async function POST(req: NextRequest) {
     captions_url: string;
     srt_url: string;
     copy: { legendas: { curta: string; media: string; longa: string }; hooks: string[]; hashtags: string[] };
-  }[] = [];
+  }
+
+  const clips: ProcessedClip[] = [];
   const clipErrors: string[] = [];
 
   const totalClips = isPro ? Math.floor(totalSeconds / clipDuration) : 1;
