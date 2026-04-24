@@ -402,18 +402,34 @@ export default function AppPage() {
         .style-name{font-size:10px;color:#7E849B}
         .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(139,92,246,.95);color:#fff;padding:12px 24px;border-radius:100px;font-size:14px;font-weight:600;z-index:999;pointer-events:none;animation:fadeup .3s ease;box-shadow:0 10px 30px rgba(139,92,246,0.3)}
         .pub-btn{text-decoration:none;background:linear-gradient(135deg,#C084FC,#8B5CF6);color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;border:none;cursor:pointer;transition:180ms ease}
-        .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(3,3,8,0.68);backdrop-filter:blur(10px);z-index:999;display:flex;align-items:center;justify-content:center;animation:fadein .3s ease}
-        .modal{background:radial-gradient(circle at top,rgba(139,92,246,0.16),transparent 35%),linear-gradient(180deg,rgba(24,24,38,0.95),rgba(12,12,20,0.95));border:1px solid rgba(255,255,255,0.10);border-radius:28px;padding:36px;width:90%;max-width:520px;text-align:center;box-shadow:0 30px 120px rgba(0,0,0,0.55),0 0 40px rgba(139,92,246,0.12);position:relative}
-        .modal-close{position:absolute;top:20px;right:20px;background:none;border:none;color:#B8BED6;font-size:24px;cursor:pointer;transition:180ms ease}
-        .chip{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:#E7EAF6;border-radius:10px;padding:10px 6px;cursor:pointer;font-weight:600;font-size:13px;transition:180ms ease}
-        .chip.on{background:rgba(139,92,246,0.18);border-color:rgba(139,92,246,0.45);color:#F5F7FF;box-shadow:0 0 12px rgba(139,92,246,0.15)}
-        .adv-panel{border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);border-radius:16px;margin:24px 0 0;overflow:hidden;transition:all 240ms cubic-bezier(0.22, 1, 0.36, 1)}
-        .adv-btn{width:100%;padding:16px 20px;background:none;border:none;color:#F5F7FF;font-size:14px;font-weight:600;display:flex;justify-content:space-between;cursor:pointer;transition:180ms ease}
-        .adv-content{padding:0 20px;max-height:0;overflow:hidden;transition:max-height 240ms cubic-bezier(0.22, 1, 0.36, 1), padding 240ms ease; opacity:0}
-        .adv-content.open{max-height:500px;padding:0 20px 20px; opacity:1}
-        .label{display:flex;justify-content:space-between;font-size:13px;color:#B8BED6;margin:16px 0 8px;font-weight:500}
-        .btn-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-        .btn-grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+        .pub-modal{background:linear-gradient(180deg,#0B1020,#0A0F1A);border:1px solid rgba(255,255,255,0.1);border-radius:24px;padding:32px;width:90%;max-width:460px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.8);position:relative;animation:modalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)}
+        .pub-header{margin-bottom:28px}
+        .pub-title{font-size:26px;font-weight:800;color:#fff;margin-bottom:8px;letter-spacing:-0.5px}
+        .pub-sub{font-size:14px;color:#A0A7B5;line-height:1.5}
+        .pub-close{position:absolute;top:20px;right:20px;width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.05);border:none;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:0.2s}
+        .pub-close:hover{background:rgba(255,255,255,0.15);transform:rotate(90deg)}
+        
+        .pub-list{display:flex;flex-direction:column;gap:16px;margin-bottom:24px}
+        .pub-card{display:flex;align-items:center;gap:16px;padding:16px 20px;border-radius:18px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.05);cursor:pointer;transition:all 0.2s ease;text-align:left;position:relative;overflow:hidden;text-decoration:none}
+        .pub-card:hover{transform:scale(1.02);background:rgba(255,255,255,0.06)}
+        
+        .pub-card.yt{border-color:rgba(255,0,0,0.3);box-shadow:0 0 20px rgba(255,0,0,0.1)}
+        .pub-card.yt:hover{box-shadow:0 0 30px rgba(255,0,0,0.2);border-color:rgba(255,0,0,0.5)}
+        .pub-card.ig{border-color:rgba(255,0,150,0.25);box-shadow:0 0 20px rgba(255,0,150,0.1)}
+        .pub-card.ig:hover{box-shadow:0 0 30px rgba(255,0,150,0.2);border-color:rgba(255,0,150,0.45)}
+        .pub-card.wa{background:linear-gradient(135deg,#1FAF38,#25D366);border:none;box-shadow:0 10px 30px rgba(37,211,102,0.3)}
+        .pub-card.wa:hover{box-shadow:0 15px 40px rgba(37,211,102,0.5);transform:scale(1.03)}
+        
+        .pub-icon-box{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}
+        .pub-info{flex:1}
+        .pub-info h4{margin:0 0 2px;font-size:16px;font-weight:700;color:#fff}
+        .pub-info p{margin:0;font-size:12px;color:rgba(255,255,255,0.5)}
+        .pub-card.wa .pub-info p{color:rgba(255,255,255,0.9);font-weight:600}
+        .pub-arrow{font-size:18px;color:rgba(255,255,255,0.2)}
+        
+        .pub-footer{display:flex;align-items:center;justify-content:center;gap:8px;font-size:12px;color:#4ADE80;opacity:0.8}
+        
+        @keyframes modalIn{from{opacity:0;transform:scale(0.95) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
         @keyframes fadein{from{opacity:0}to{opacity:1}}
         @keyframes fadeup{from{opacity:0;transform:translateX(-50%) translateY(8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
         @keyframes spin{to{transform:rotate(360deg)}}
@@ -840,52 +856,81 @@ export default function AppPage() {
       )}
 
       {showPubModal && (
-        <div className="modal-overlay">
-          <div className="modal" style={{maxWidth:500}}>
-            <button className="modal-close" onClick={()=>setShowPubModal(null)}>✕</button>
-            <h2 style={{margin:"0 0 8px",fontSize:20}}>Distribuição Viral</h2>
-            <p style={{fontSize:13,color:"rgba(255,255,255,.6)",marginBottom:24}}>
-              Selecione o destino para publicar ou agendar seu clip.
-            </p>
-            <div style={{display:"grid",gap:12}}>
-              <button className="chip" style={{padding:16,display:"flex",alignItems:"center",gap:12,justifyContent:"center",fontSize:15}} onClick={()=>{copy(showPubModal.copy?.legendas?.curta || "","Legenda copiada!");window.open("https://youtube.com/upload","_blank");}}>
-                <span style={{color:"#ff0000",fontSize:20}}>▶</span> YouTube Shorts (Copiar Legenda e Abrir)
-              </button>
-              
-              {igAccounts === null || igAccounts.length === 0 ? (
-                <button className="chip" style={{padding:16,display:"flex",alignItems:"center",gap:12,justifyContent:"center",fontSize:15}} onClick={()=>window.location.href="/api/auth/instagram"}>
-                  <span style={{color:"#E1306C",fontSize:20}}>📸</span> Conectar Conta do Instagram (Reels)
-                </button>
+        <div className="modal-overlay" onClick={()=>setShowPubModal(null)}>
+          <div className="pub-modal" onClick={e=>e.stopPropagation()}>
+            <button className="pub-close" onClick={()=>setShowPubModal(null)}>✕</button>
+            
+            <div className="pub-header">
+              <h2 className="pub-title">Distribuição Viral</h2>
+              <p className="pub-sub">Selecione o destino para publicar ou agendar seu clip.</p>
+            </div>
+
+            <div className="pub-list">
+              {/* YouTube Shorts */}
+              <a href="https://studio.youtube.com/" target="_blank" className="pub-card yt" onClick={()=>copy(showPubModal.copy?.legendas?.curta || "","Legenda copiada!")}>
+                <div className="pub-icon-box" style={{background:"rgba(255,0,0,0.1)", border: "1px solid rgba(255,0,0,0.2)"}}>
+                  <span style={{color:"#FF0000", fontSize: "20px"}}>▶</span>
+                </div>
+                <div className="pub-info">
+                  <h4>YouTube Shorts</h4>
+                  <p>(Copiar legenda e abrir)</p>
+                </div>
+                <div className="pub-arrow">›</div>
+              </a>
+
+              {/* Instagram Reels (Dinâmico) */}
+              {!igAccounts || igAccounts.length === 0 ? (
+                <div className="pub-card ig" onClick={()=>window.location.href="/api/auth/instagram"}>
+                  <div className="pub-icon-box" style={{background:"linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%)"}}>
+                    <span style={{color:"#fff", fontSize: "20px"}}>📸</span>
+                  </div>
+                  <div className="pub-info">
+                    <h4>Conectar Conta do Instagram</h4>
+                    <p>(Reels)</p>
+                  </div>
+                  <div className="pub-arrow">›</div>
+                </div>
               ) : (
-                <div style={{background:"rgba(255,255,255,.03)",border:"1px solid rgba(255,255,255,.1)",borderRadius:12,padding:16}}>
-                  <div style={{fontSize:13,color:"#E1306C",fontWeight:700,marginBottom:12}}>📸 POSTAR NO INSTAGRAM REELS</div>
-                  {igAccounts.map(acc => (
-                    <div key={acc.igId} style={{display:"flex",justifyContent:"space-between",alignItems:"center",background:"rgba(0,0,0,.3)",padding:10,borderRadius:8,marginBottom:8}}>
-                      <div style={{display:"flex",alignItems:"center",gap:10}}>
-                        <img src={acc.igPicture || "https://placehold.co/40x40/333/fff?text=IG"} width={30} height={30} style={{borderRadius:"50%"}} alt="ig"/>
-                        <span style={{fontSize:14,fontWeight:600}}>@{acc.igUsername}</span>
-                      </div>
-                      <button className="pub-btn" onClick={()=>publishToInstagram(acc.igId)} disabled={igStatus==="publishing"}>
-                        {igStatus==="publishing" ? "⏳" : "Publicar"}
-                      </button>
+                <div className="pub-card ig" style={{flexDirection:"column", alignItems:"stretch", gap: 10}}>
+                   <div style={{display:"flex", alignItems:"center", gap: 16}}>
+                    <div className="pub-icon-box" style={{background:"linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%)", width: 40, height: 40}}>
+                      <span style={{color:"#fff", fontSize: "16px"}}>📸</span>
                     </div>
-                  ))}
-                  {igStatus==="publishing" && <div style={{fontSize:12,color:"#c4a0ff",marginTop:8}}>Enviando e processando vídeo no Meta... (Pode levar até 2 min)</div>}
-                  {igStatus==="done" && <div style={{fontSize:12,color:"#4ade80",marginTop:8}}>✅ Vídeo publicado com sucesso!</div>}
+                    <div className="pub-info">
+                      <h4>Instagram Reels</h4>
+                      <p>Escolha o perfil para postar:</p>
+                    </div>
+                   </div>
+                   <div style={{display:"grid", gap: 8, marginTop: 8}}>
+                     {igAccounts.map(acc => (
+                       <button key={acc.igId} className="pub-btn" style={{width: "100%", justifyContent: "space-between", padding: "10px 16px", borderRadius: 12, background: "rgba(255,255,255,0.05)"}} onClick={()=>publishToInstagram(acc.igId)}>
+                         <span style={{display:"flex", alignItems:"center", gap: 8}}>
+                           <img src={acc.igPicture || ""} width={20} height={20} style={{borderRadius:"50%"}} />
+                           @{acc.igUsername}
+                         </span>
+                         <span>{igStatus === "publishing" ? "⏳" : "Postar"}</span>
+                       </button>
+                     ))}
+                   </div>
                 </div>
               )}
 
-              <button className="chip" style={{padding:16,display:"flex",alignItems:"center",gap:12,justifyContent:"center",fontSize:15, background: "#25D366", color: "#fff", border: "none"}} onClick={() => shareToWhatsApp(showPubModal)}>
-                <span style={{fontSize:20}}>💬</span> Enviar para WhatsApp (Custo Zero)
-              </button>
+              {/* WhatsApp - AÇÃO PRINCIPAL */}
+              <div className="pub-card wa" onClick={() => shareToWhatsApp(showPubModal)}>
+                <div className="pub-icon-box" style={{background:"rgba(255,255,255,0.15)"}}>
+                  <span style={{color:"#fff", fontSize: "24px"}}>💬</span>
+                </div>
+                <div className="pub-info">
+                  <h4 style={{color:"#fff"}}>Enviar para WhatsApp</h4>
+                  <p>(Custo Zero)</p>
+                </div>
+                <div className="pub-arrow" style={{color:"#fff"}}>›</div>
+              </div>
+            </div>
 
-              <button className="chip" style={{padding:16,display:"flex",alignItems:"center",gap:12,justifyContent:"center",fontSize:15}} onClick={() => shareToSMS(showPubModal)}>
-                <span style={{fontSize:20}}>📱</span> Enviar via SMS
-              </button>
-
-              <button className="chip" style={{padding:16,display:"flex",alignItems:"center",gap:12,justifyContent:"center",fontSize:15,opacity:.5}} disabled>
-                <span style={{color:"#fff",fontSize:20}}>🎵</span> TikTok (Em breve)
-              </button>
+            <div className="pub-footer">
+              <span style={{fontSize: "14px"}}>🛡️</span>
+              <span>Seguro • Rápido • Sem custos</span>
             </div>
           </div>
         </div>
